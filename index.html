@@ -1671,7 +1671,7 @@ document.getElementById('textInput').addEventListener('keydown', e => {
 
 /* ══ FIREBASE AUTH & FIRESTORE ══ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1703,27 +1703,26 @@ function setAuthMsg(msg,type='err'){
   el.className='auth-msg '+type; el.textContent=msg;
 }
 
-/* ── Google Sign-In (only auth method) ── */
-function isMobileDevice(){
-  return /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(navigator.userAgent);
-}
-
+/* ── Google Sign-In (only auth method) ──
+   ใช้ signInWithPopup ทั้งมือถือและคอม เพราะ signInWithRedirect ต้องพึ่ง
+   cross-site storage ของ authDomain (xxx.firebaseapp.com) ซึ่ง Safari iOS
+   และ Chrome Android รุ่นใหม่ๆ บล็อกโดย default ทำให้ getRedirectResult()
+   คืนค่า null แบบเงียบๆ (ไม่มี error) และ onAuthStateChanged ไม่ fire เลย */
 async function doGoogleLogin(){
   try{
     const provider=new GoogleAuthProvider();
-    if(isMobileDevice()){
-      await signInWithRedirect(auth,provider);
+    await signInWithPopup(auth,provider);
+  }catch(e){
+    if(e?.code==='auth/popup-blocked'){
+      setAuthMsg('เบราว์เซอร์บล็อก popup กรุณาอนุญาต popup สำหรับเว็บไซต์นี้แล้วลองใหม่');
+    }else if(e?.code==='auth/cancelled-popup-request'||e?.code==='auth/popup-closed-by-user'){
+      /* ผู้ใช้ปิดหน้าต่างเอง ไม่ต้องโชว์ error */
     }else{
-      await signInWithPopup(auth,provider);
+      setAuthMsg('Google login ผิดพลาด: '+e.message);
     }
-  }catch(e){ setAuthMsg('Google login ผิดพลาด: '+e.message); }
+  }
 }
 window.doGoogleLogin=doGoogleLogin;
-
-/* ── Catch result/errors coming back from a redirect-based sign-in (mobile) ── */
-getRedirectResult(auth).catch(e=>{
-  if(e?.code) setAuthMsg('Google login ผิดพลาด: '+e.message);
-});
 
 /* ── Logout ── */
 async function doLogout(){
