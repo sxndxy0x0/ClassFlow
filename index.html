@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Smart Calendar</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNThhNmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2JjOGNmZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9InVybCgjZykiLz4KICA8cGF0aCBkPSJNMzIgMTQgQzM0IDI0LCA0MCAzMCwgNTAgMzIgQzQwIDM0LCAzNCA0MCwgMzIgNTAgQzMwIDQwLCAyNCAzNCwgMTQgMzIgQzI0IDMwLCAzMCAyNCwgMzIgMTQgWiIgZmlsbD0iI2ZmZmZmZiIvPgo8L3N2Zz4K"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;
+  --bg2:#161b22;
+  --bg3:#1c2333;
+  --bg4:#21262d;
+  --border:#30363d;
+  --border2:#484f58;
+  --text1:#e6edf3;
+  --text2:#8b949e;
+  --text3:#6e7681;
+  --blue:#58a6ff;
+  --blue-dim:rgba(88,166,255,.12);
+  --teal:#39d353;
+  --teal-dim:rgba(57,211,83,.1);
+  --amber:#d29922;
+  --amber-dim:rgba(210,153,34,.12);
+  --red:#f85149;
+  --purple:#bc8cff;
+  --radius:8px;
+  --radius-sm:5px;
+  --radius-lg:12px;
+}
+body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);color:var(--text1);min-height:100vh}
+
+/* ── APP SHELL ── */
+.app{max-width:1200px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.app.hidden{display:none}
+
+/* ── HEADER ── */
+.app-header{padding:16px 20px 0;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.app-logo{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--text1);letter-spacing:-.3px}
+.app-logo .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;flex-shrink:0}
+.app-logo .ver{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3);background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:4px}
+.tabs{display:flex;gap:0;margin-left:auto;padding-bottom:0}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:7px;border-top:none;border-left:none;border-right:none;background:none}
+.tab:hover{color:var(--text1)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab i{font-size:15px}
+
+/* ── PANES ── */
+.pane{display:none;animation:fadeIn .2s ease}.pane.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── MONTHLY LAYOUT ── */
+.monthly-grid{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 56px)}
+.left-rail{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:0;overflow-y:auto}
+.rail-section{padding:16px;border-bottom:1px solid var(--border)}
+.rail-section:last-child{border-bottom:none;flex:1}
+
+.section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.section-label i{font-size:12px}
+
+/* drop zone */
+.drop-zone{border:1.5px dashed var(--border2);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg3)}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:var(--blue-dim)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:24px;color:var(--text3);margin-bottom:6px}
+.drop-zone p{font-size:12px;color:var(--text2);line-height:1.6}
+.drop-zone small{font-size:10px;color:var(--text3)}
+
+/* textarea */
+.smart-input{position:relative}
+.smart-input textarea{width:100%;min-height:100px;resize:vertical;font-family:'Sarabun',sans-serif;font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text1);line-height:1.7;transition:border-color .2s}
+.smart-input textarea:focus{outline:none;border-color:var(--blue)}
+.input-hint{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5}
+.char-count{position:absolute;bottom:28px;right:10px;font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;pointer-events:none}
+
+/* AI button */
+.ai-btn{width:100%;padding:10px 14px;background:linear-gradient(135deg,#1a3a6c,#1e2d5e);border:1px solid #2d4a8a;border-radius:var(--radius);color:#fff;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;position:relative;overflow:hidden}
+.ai-btn:hover{background:linear-gradient(135deg,#1e4580,#243870);transform:translateY(-1px);box-shadow:0 4px 12px rgba(58,130,246,.2)}
+.ai-btn:active{transform:none}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.ai-btn .spark{font-size:16px}
+.ai-badge{font-size:9px;font-family:'IBM Plex Mono',monospace;background:rgba(88,166,255,.2);border:1px solid rgba(88,166,255,.3);border-radius:3px;padding:1px 4px;color:var(--blue);margin-left:auto}
+
+/* status bar */
+.status-bar{font-size:11px;min-height:18px;display:flex;align-items:center;gap:5px;padding:2px 0}
+.status-ok{color:var(--teal)}.status-warn{color:var(--amber)}.status-info{color:var(--blue)}.status-err{color:var(--red)}
+
+/* parsed items */
+.parsed-list{display:flex;flex-direction:column;gap:4px;overflow-y:auto;max-height:220px}
+.parsed-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:8px}
+.parsed-item:hover{border-color:var(--blue);background:var(--blue-dim)}
+.parsed-item.added{border-color:var(--teal);background:var(--teal-dim)}
+.pi-left{flex:1}
+.pi-header{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.pi-date{font-size:11px;font-weight:600;color:var(--blue);font-family:'IBM Plex Mono',monospace}
+.pi-time{font-size:10px;color:var(--text3);background:var(--bg4);border-radius:3px;padding:0 4px}
+.pi-cat{font-size:10px;padding:1px 5px;border-radius:10px;font-weight:500}
+.pi-text{color:var(--text1);line-height:1.4}
+.pi-add{color:var(--teal);font-size:18px;flex-shrink:0;line-height:1;margin-top:1px;font-weight:300}
+.parsed-item.added .pi-add{color:var(--teal);font-size:14px}
+.empty-state{text-align:center;padding:20px;color:var(--text3);font-size:12px;line-height:1.8}
+.empty-state i{font-size:28px;display:block;margin-bottom:6px;opacity:.4}
+
+/* AI insight box */
+.ai-insight{background:linear-gradient(135deg,rgba(88,166,255,.06),rgba(188,140,255,.06));border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:12px;font-size:12px;color:var(--text2);line-height:1.7;margin-top:4px}
+.ai-insight strong{color:var(--text1)}
+.ai-insight-header{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px}
+
+/* ── CALENDAR ── */
+.cal-panel{padding:18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.cal-header{display:flex;align-items:center;gap:10px}
+.cal-nav{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .2s}
+.cal-nav:hover{border-color:var(--blue);color:var(--blue)}
+.cal-month-title{font-size:17px;font-weight:700;color:var(--text1);flex:1;letter-spacing:-.3px}
+.cal-month-sub{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.cal-header-right{display:flex;gap:6px}
+.view-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.vt-btn{padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;font-family:'Sarabun',sans-serif;transition:all .15s}
+.vt-btn.active{background:var(--blue);color:#fff}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-name{text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:5px 0;text-transform:uppercase;letter-spacing:.05em}
+.cal-cell{min-height:70px;border-radius:var(--radius-sm);padding:5px;cursor:pointer;transition:all .15s;position:relative;border:1px solid transparent}
+.cal-cell:hover{background:var(--bg3);border-color:var(--border)}
+.cal-cell.other-month .day-num{color:var(--text3);opacity:.4}
+.cal-cell.other-month{opacity:.6}
+.cal-cell.today{background:var(--blue-dim);border-color:rgba(88,166,255,.3)}
+.cal-cell.today .day-num{color:var(--blue);font-weight:700}
+.cal-cell.selected{background:var(--bg4);border-color:var(--blue)}
+.cal-cell.selected .day-num{color:#fff;background:var(--blue);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.day-num{font-size:12px;font-weight:500;color:var(--text1);width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+.day-events{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.day-ev-chip{font-size:9px;color:#fff;border-radius:3px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.6}
+.day-more{font-size:9px;color:var(--text3);margin-top:1px}
+
+/* event list */
+.ev-section{border-top:1px solid var(--border);padding-top:12px}
+.ev-section-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.ev-count-badge{font-size:10px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:1px 7px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.ev-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);transition:all .15s}
+.ev-item:last-child{border-bottom:none}
+.ev-item:hover .ev-name{color:var(--blue)}
+.ev-color-bar{width:3px;height:36px;border-radius:2px;flex-shrink:0}
+.ev-info{flex:1}
+.ev-name{font-size:13px;color:var(--text1);font-weight:500;transition:color .15s}
+.ev-meta{font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px}
+.ev-time-chip{background:var(--bg4);border-radius:3px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:10px}
+.ev-cat-chip{border-radius:10px;padding:1px 6px;font-size:10px;font-weight:500}
+.ev-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:4px;border-radius:4px;transition:all .15s}
+.ev-del:hover{color:var(--red);background:rgba(248,81,73,.1)}
+
+/* mini stats */
+.mini-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center}
+.stat-num{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--blue)}
+.stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── WEEKLY / TIMETABLE ── */
+.week-pane{display:flex;flex-direction:column;gap:0;min-height:calc(100vh - 56px)}
+.week-sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.week-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.week-layout{display:flex;flex:1;min-height:0}
+
+.week-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2)}
+.week-title{font-size:15px;font-weight:700;color:var(--text1)}
+.week-subtitle{font-size:11px;color:var(--text3);margin-left:auto;font-family:'IBM Plex Mono',monospace}
+
+/* course form */
+.sidebar-sec{padding:14px;border-bottom:1px solid var(--border)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.fi{display:flex;flex-direction:column;gap:3px}
+.fi label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fi input,.fi select{font-family:'Sarabun',sans-serif;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text1);width:100%;transition:border-color .2s}
+.fi input:focus,.fi select:focus{outline:none;border-color:var(--blue)}
+.fi input::placeholder{color:var(--text3)}
+.time-pair{display:flex;align-items:center;gap:4px}
+.time-sep{color:var(--text3);font-size:11px;flex-shrink:0}
+
+/* color picker for courses */
+.color-row{display:flex;gap:5px;align-items:center;margin-bottom:8px}
+.color-swatch{width:18px;height:18px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.color-swatch.active{border-color:#fff;transform:scale(1.15)}
+
+/* course chips */
+.course-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.course-chip{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);transition:all .15s}
+.course-chip:hover{border-color:var(--border2)}
+.chip-accent{width:3px;height:32px;border-radius:2px;flex-shrink:0}
+.chip-info{flex:1;min-width:0}
+.chip-code{font-size:12px;font-weight:600;color:var(--text1)}
+.chip-meta{font-size:10px;color:var(--text3);margin-top:1px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip-del{background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;border-radius:3px;transition:all .15s}
+.chip-del:hover{color:var(--red);background:rgba(248,81,73,.1)}
+
+/* timetable */
+.tt-scroll{overflow-x:auto;padding:16px;flex:1}
+.tt{border-collapse:collapse;min-width:800px;width:100%}
+.tt-time-col{width:52px}
+.tt th{padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);border:1px solid var(--border);background:var(--bg2);white-space:nowrap;letter-spacing:.03em}
+.tt td{border:1px solid var(--border);vertical-align:top;height:52px;position:relative}
+.tt td.time-label{text-align:center;font-size:10px;font-weight:600;color:var(--text3);background:var(--bg2);padding:0 6px;white-space:nowrap;font-family:'IBM Plex Mono',monospace;vertical-align:middle}
+.tt td.day-col{background:var(--bg);min-width:80px}
+.tt td.day-col:hover{background:var(--bg3)}
+.tt-now-line{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:10;pointer-events:none}
+.tt-now-dot{position:absolute;left:-4px;width:8px;height:8px;background:var(--red);border-radius:50%;top:-3px}
+
+.tt-block{border-radius:5px;padding:5px 7px;height:100%;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.tt-block::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+.tt-block:hover::before{background:rgba(255,255,255,.08)}
+.tb-code{font-weight:700;font-size:11px;color:#fff;font-family:'IBM Plex Mono',monospace}
+.tb-name{font-size:10px;color:rgba(255,255,255,.85);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-room{font-size:9px;color:rgba(255,255,255,.65);margin-top:2px;display:flex;align-items:center;gap:3px}
+.tb-time{font-size:9px;color:rgba(255,255,255,.55);margin-top:1px}
+
+/* course detail modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;width:340px;max-width:95vw}
+.modal-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.modal-body{font-size:13px;color:var(--text2);line-height:1.8}
+.modal-body strong{color:var(--text1)}
+.modal-footer{margin-top:14px;display:flex;gap:7px;justify-content:flex-end}
+
+/* bulk import */
+.paste-box{width:100%;min-height:80px;font-family:'Sarabun',sans-serif;font-size:12px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text1);resize:vertical;line-height:1.6}
+.paste-box:focus{outline:none;border-color:var(--blue)}
+
+/* buttons */
+.btn{padding:8px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;background:var(--bg3);color:var(--text1)}
+.btn:hover{border-color:var(--border2);background:var(--bg4)}
+.btn-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-blue:hover{background:#79b8ff;border-color:#79b8ff}
+.btn-ghost{background:none;border-color:transparent;color:var(--text2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text1)}
+.btn-danger-sm{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:3px 5px;border-radius:4px;transition:all .15s}
+.btn-danger-sm:hover{color:var(--red);background:rgba(248,81,73,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
+.btn i{font-size:14px}
+
+/* category colors */
+.cat-work{color:#58a6ff;background:rgba(88,166,255,.12)}
+.cat-health{color:#3fb950;background:rgba(63,185,80,.12)}
+.cat-personal{color:#bc8cff;background:rgba(188,140,255,.12)}
+.cat-study{color:#d29922;background:rgba(210,153,34,.12)}
+.cat-other{color:#8b949e;background:rgba(139,148,158,.12)}
+
+/* AI Analysis panel */
+.ai-panel{background:linear-gradient(135deg,rgba(88,166,255,.04),rgba(188,140,255,.04));border:1px solid rgba(88,166,255,.15);border-radius:var(--radius);padding:14px;margin-top:4px}
+.ai-panel-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ai-panel-title{font-size:13px;font-weight:600;color:var(--blue)}
+.ai-tag{font-size:9px;font-family:'IBM Plex Mono',monospace;background:rgba(88,166,255,.15);color:var(--blue);border-radius:3px;padding:1px 5px}
+.ai-loading{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:pulse 1.2s infinite}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.ai-result{font-size:12px;color:var(--text2);line-height:1.8}
+.ai-result h4{color:var(--text1);font-size:12px;font-weight:600;margin:8px 0 3px;display:flex;align-items:center;gap:5px}
+.ai-result p{margin-bottom:6px}
+.ai-result ul{margin-left:16px;margin-bottom:6px}
+.ai-result li{margin-bottom:3px}
+.ai-result .highlight{color:var(--blue);font-weight:500}
+.ai-result .warn{color:var(--amber)}
+.ai-result .good{color:var(--teal)}
+
+/* weekly AI summary */
+.week-ai-bar{padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.week-ai-content{flex:1;font-size:12px;color:var(--text2);line-height:1.7}
+.week-ai-content strong{color:var(--text1)}
+
+/* tooltip */
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--bg4);color:var(--text1);font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);white-space:nowrap;z-index:50;pointer-events:none}
+
+/* scrollbars */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+
+/* ── AUTH MODAL (minimal, Google-only) ── */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.auth-overlay.hidden{display:none}
+.auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:360px;max-width:95vw}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.auth-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+.auth-title{font-size:18px;font-weight:700;color:var(--text1)}
+.auth-subtitle{font-size:12px;color:var(--text3);margin-top:2px}
+.auth-submit{width:100%;padding:11px;background:linear-gradient(135deg,var(--blue),#3b82f6);border:none;border-radius:var(--radius-sm);color:#fff;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.auth-submit:hover{opacity:.9;transform:translateY(-1px)}
+.auth-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-msg{font-size:12px;min-height:18px;margin-top:8px;text-align:center;border-radius:5px;padding:6px 10px}
+.auth-msg.err{background:rgba(248,81,73,.1);color:var(--red)}
+.auth-msg.ok{background:var(--teal-dim);color:var(--teal)}
+
+/* ══════════════════════════════════════════════
+   LANDING PAGE
+   Signature: a messy, handwritten-style class schedule
+   physically re-flows into the app's own clean grid —
+   the product's one real trick, shown instead of told.
+══════════════════════════════════════════════ */
+:root{
+  --land-display: 'IBM Plex Mono', monospace;
+  --land-ink:#eef2f6;
+  --land-muted:#7d8794;
+}
+#landing{min-height:100vh;display:flex;flex-direction:column;background:
+  radial-gradient(ellipse 900px 500px at 15% -5%, rgba(88,166,255,.10), transparent 60%),
+  radial-gradient(ellipse 700px 500px at 100% 10%, rgba(188,140,255,.08), transparent 60%),
+  var(--bg);
+  overflow-x:hidden}
+#landing.hidden{display:none}
+
+.land-nav{max-width:1180px;width:100%;margin:0 auto;padding:22px 24px 0;display:flex;align-items:center;gap:10px}
+.land-nav .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;flex-shrink:0}
+.land-nav-name{font-size:15px;font-weight:700;color:var(--text1);letter-spacing:-.2px}
+.land-nav-name .ver{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text3);background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:500}
+.land-nav-cta{margin-left:auto;padding:8px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text1);font-size:13px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .2s}
+.land-nav-cta:hover{border-color:var(--border2);background:var(--bg4)}
+
+/* ── HERO ── */
+.land-hero{max-width:1180px;width:100%;margin:0 auto;padding:56px 24px 30px;display:grid;grid-template-columns:1fr 460px;gap:48px;align-items:center}
+.land-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(88,166,255,.25);border-radius:20px;padding:5px 12px 5px 9px;margin-bottom:20px;letter-spacing:.02em}
+.land-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.land-h1{font-family:var(--land-display);font-size:46px;line-height:1.18;font-weight:600;color:var(--land-ink);letter-spacing:-.5px;margin-bottom:18px}
+.land-h1 .accent{color:var(--blue)}
+.land-h1 .accent2{color:var(--purple)}
+.land-sub{font-size:16px;line-height:1.8;color:var(--text2);max-width:480px;margin-bottom:30px}
+.land-cta-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.land-cta{display:flex;align-items:center;gap:10px;padding:14px 24px;background:#fff;color:#1f1f1f;border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 8px 24px rgba(255,255,255,.08)}
+.land-cta:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(255,255,255,.14)}
+.land-cta:active{transform:translateY(0)}
+.land-cta-note{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.land-stats{display:flex;gap:26px;margin-top:38px;padding-top:22px;border-top:1px solid var(--border)}
+.land-stat b{font-family:var(--land-display);font-size:20px;color:var(--text1);display:block;font-weight:600}
+.land-stat span{font-size:11px;color:var(--text3)}
+
+/* ── HERO VISUAL: messy → clean morph ── */
+.land-visual{position:relative;height:420px}
+.morph-stage{position:absolute;inset:0;border-radius:14px;overflow:hidden}
+.morph-scrap{position:absolute;inset:0;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text2);line-height:2.3;animation:scrapFade 8s ease-in-out infinite;transform:rotate(-1.2deg)}
+.morph-scrap b{color:var(--text1)}
+.morph-scrap .strike{color:var(--text3);text-decoration:line-through;opacity:.5}
+.morph-grid{position:absolute;inset:0;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;animation:gridFade 8s ease-in-out infinite}
+.morph-grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.morph-grid-title{font-size:12px;font-weight:700;color:var(--text1)}
+.morph-grid-pill{font-size:9px;color:var(--teal);background:var(--teal-dim);border-radius:10px;padding:2px 8px;font-weight:600}
+.morph-week{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;height:calc(100% - 40px)}
+.morph-day{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 5px;display:flex;flex-direction:column;gap:5px}
+.morph-day-label{font-size:9px;color:var(--text3);text-align:center;font-weight:600}
+.morph-chip{border-radius:4px;padding:4px 5px;font-size:8.5px;color:#fff;line-height:1.4;font-weight:600;opacity:0;animation:chipIn .4s ease forwards}
+@keyframes scrapFade{0%,38%{opacity:1;transform:rotate(-1.2deg) scale(1)}48%,100%{opacity:0;transform:rotate(-1.2deg) scale(.96)}}
+@keyframes gridFade{0%,38%{opacity:0;transform:scale(1.02)}50%,100%{opacity:1;transform:scale(1)}}
+@keyframes chipIn{to{opacity:1}}
+.morph-badge{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.morph-badge .spark{color:var(--blue)}
+@media(prefers-reduced-motion:reduce){.morph-scrap,.morph-grid,.morph-chip{animation:none}.morph-scrap{opacity:1}.morph-grid{opacity:0}}
+
+/* ── FEATURES ── */
+.land-section{max-width:1180px;width:100%;margin:0 auto;padding:70px 24px}
+.land-section-head{margin-bottom:36px;max-width:560px}
+.land-section-eyebrow{font-family:var(--land-display);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+.land-section-title{font-size:26px;font-weight:700;color:var(--text1);letter-spacing:-.3px;line-height:1.4}
+.land-features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.land-feat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;transition:all .2s}
+.land-feat:hover{border-color:var(--border2);transform:translateY(-3px)}
+.land-feat-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
+.land-feat-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:8px}
+.land-feat-desc{font-size:13px;color:var(--text2);line-height:1.7}
+.land-feat:nth-child(1) .land-feat-icon{background:var(--blue-dim);color:var(--blue)}
+.land-feat:nth-child(2) .land-feat-icon{background:rgba(188,140,255,.12);color:var(--purple)}
+.land-feat:nth-child(3) .land-feat-icon{background:var(--teal-dim);color:var(--teal)}
+.land-feat:nth-child(4) .land-feat-icon{background:var(--amber-dim);color:var(--amber)}
+.land-feat:nth-child(5) .land-feat-icon{background:var(--blue-dim);color:var(--blue)}
+.land-feat:nth-child(6) .land-feat-icon{background:rgba(188,140,255,.12);color:var(--purple)}
+
+/* ── CTA BAND ── */
+.land-final{max-width:1180px;width:100%;margin:0 auto;padding:0 24px 90px}
+.land-final-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:20px;padding:54px 48px;text-align:center;position:relative;overflow:hidden}
+.land-final-card::before{content:'';position:absolute;top:-60%;right:-10%;width:340px;height:340px;background:radial-gradient(circle,rgba(88,166,255,.14),transparent 70%);pointer-events:none}
+.land-final-title{font-family:var(--land-display);font-size:28px;color:var(--land-ink);font-weight:600;margin-bottom:12px;letter-spacing:-.3px}
+.land-final-sub{font-size:14px;color:var(--text2);margin-bottom:26px}
+.land-foot{text-align:center;padding:20px 24px 32px;font-size:11px;color:var(--text3)}
+
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .65s ease,transform .65s ease}
+.reveal.visible{opacity:1;transform:none}
+
+/* ── GLOW ORBS ── */
+.land-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.18}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,#58a6ff,transparent);top:-200px;left:-150px;animation:orbFloat1 14s ease-in-out infinite}
+.orb2{width:500px;height:500px;background:radial-gradient(circle,#bc8cff,transparent);top:20%;right:-180px;animation:orbFloat2 18s ease-in-out infinite}
+.orb3{width:400px;height:400px;background:radial-gradient(circle,#39d353,transparent);bottom:10%;left:30%;animation:orbFloat3 20s ease-in-out infinite;opacity:.10}
+@keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,30px) scale(1.05)}}
+@keyframes orbFloat2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-30px,40px) scale(1.07)}}
+@keyframes orbFloat3{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-25px)}}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+#landing::after{content:'';position:fixed;inset:0;pointer-events:none;opacity:.025;z-index:1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}
+
+/* ── HERO BADGE PULSE ── */
+.land-eyebrow .dot{animation:dotPulse 2.5s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{box-shadow:0 0 0 3px var(--teal-dim)}50%{box-shadow:0 0 0 6px rgba(57,211,83,.06)}}
+
+/* ── HERO H1 GRADIENT TEXT ── */
+.land-h1 .accent{background:linear-gradient(90deg,#58a6ff,#79b8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.land-h1 .accent2{background:linear-gradient(90deg,#bc8cff,#d8b4fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── HERO CTA BUTTON ── */
+.land-cta{position:relative;overflow:hidden;border-radius:11px;box-shadow:0 8px 30px rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.06)}
+.land-cta::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);transform:translateX(-100%);transition:transform .5s ease}
+.land-cta:hover::after{transform:translateX(100%)}
+
+/* ── STATS ── */
+.land-stat b{background:linear-gradient(90deg,var(--text1),var(--text2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.land-stats{gap:32px}
+.land-stat-divider{width:1px;background:var(--border);align-self:stretch}
+
+/* ── NAV GLASS ── */
+.land-nav{position:sticky;top:0;z-index:10;background:rgba(13,17,23,.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(48,54,61,.6);padding:14px 24px;max-width:100%;margin:0 auto}
+.land-nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;width:100%}
+.land-nav .logo-icon{box-shadow:0 0 12px rgba(88,166,255,.3)}
+.land-nav-links{display:flex;gap:24px;margin-left:32px}
+.land-nav-link{font-size:13px;color:var(--text2);cursor:pointer;transition:color .2s;border:none;background:none;font-family:'Sarabun',sans-serif}
+.land-nav-link:hover{color:var(--text1)}
+
+/* ── FEATURE CARDS ENHANCED ── */
+.land-feat{position:relative;overflow:hidden;cursor:default}
+.land-feat::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s;border-radius:var(--radius-lg)}
+.land-feat:nth-child(1)::before{background:radial-gradient(circle at 30% 30%,rgba(88,166,255,.08),transparent 70%)}
+.land-feat:nth-child(2)::before{background:radial-gradient(circle at 30% 30%,rgba(188,140,255,.08),transparent 70%)}
+.land-feat:nth-child(3)::before{background:radial-gradient(circle at 30% 30%,rgba(57,211,83,.08),transparent 70%)}
+.land-feat:nth-child(4)::before{background:radial-gradient(circle at 30% 30%,rgba(210,153,34,.08),transparent 70%)}
+.land-feat:nth-child(5)::before{background:radial-gradient(circle at 30% 30%,rgba(88,166,255,.08),transparent 70%)}
+.land-feat:nth-child(6)::before{background:radial-gradient(circle at 30% 30%,rgba(188,140,255,.08),transparent 70%)}
+.land-feat:hover::before{opacity:1}
+.land-feat:hover{border-color:var(--border2);transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.land-feat-icon{transition:transform .3s}
+.land-feat:hover .land-feat-icon{transform:scale(1.12) rotate(-3deg)}
+
+/* ── HOW IT WORKS SECTION ── */
+.land-steps{max-width:1180px;width:100%;margin:0 auto;padding:0 24px 80px}
+.land-steps-head{text-align:center;margin-bottom:48px}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative}
+.steps-grid::before{content:'';position:absolute;top:22px;left:calc(16.6% + 20px);right:calc(16.6% + 20px);height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);z-index:0}
+.step-card{text-align:center;position:relative;z-index:1;padding:0 16px}
+.step-num{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:16px;font-weight:700;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);background:var(--bg2);transition:all .3s}
+.step-card:nth-child(1) .step-num{color:var(--blue);border-color:rgba(88,166,255,.4);box-shadow:0 0 20px rgba(88,166,255,.12)}
+.step-card:nth-child(2) .step-num{color:var(--purple);border-color:rgba(188,140,255,.4);box-shadow:0 0 20px rgba(188,140,255,.12)}
+.step-card:nth-child(3) .step-num{color:var(--teal);border-color:rgba(57,211,83,.4);box-shadow:0 0 20px rgba(57,211,83,.12)}
+.step-title{font-size:14px;font-weight:700;color:var(--text1);margin-bottom:8px}
+.step-desc{font-size:12px;color:var(--text2);line-height:1.8}
+
+/* ── SOCIAL PROOF ── */
+.land-social{max-width:1180px;width:100%;margin:0 auto;padding:0 24px 80px}
+.social-head{text-align:center;margin-bottom:36px}
+.social-badges{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.social-badge{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:40px;font-size:12px;color:var(--text2);transition:all .2s}
+.social-badge:hover{border-color:var(--border2);background:var(--bg3)}
+.social-badge-icon{font-size:18px}
+.social-badge strong{color:var(--text1)}
+
+/* ── FINAL CTA ENHANCED ── */
+.land-final-card{background:linear-gradient(135deg,rgba(88,166,255,.06),rgba(188,140,255,.06),var(--bg3));position:relative}
+.land-final-card::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:200px;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.land-final-glow{position:absolute;inset:0;border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);pointer-events:none}
+.land-final-title{font-size:32px;margin-bottom:14px}
+.land-final-sub{font-size:15px;margin-bottom:30px;max-width:400px;margin-left:auto;margin-right:auto}
+
+/* ── FOOTER ENHANCED ── */
+.land-foot{border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px}
+.land-foot-logo{width:20px;height:20px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;vertical-align:middle}
+
+/* ── MORPH VISUAL ENHANCED ── */
+.morph-stage{box-shadow:0 24px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.04)}
+.morph-badge{box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 12px rgba(88,166,255,.15);animation:badgeFloat 3s ease-in-out infinite}
+@keyframes badgeFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-4px)}}
+
+@media(max-width:860px){
+  .land-hero{grid-template-columns:1fr;padding-top:36px}
+  .land-visual{height:300px;order:-1}
+  .land-h1{font-size:32px}
+  .land-features{grid-template-columns:1fr}
+  .land-final-card{padding:38px 26px}
+  .steps-grid{grid-template-columns:1fr;gap:32px}
+  .steps-grid::before{display:none}
+  .land-nav-links{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .orb,.land-eyebrow .dot,.morph-badge{animation:none}
+  .reveal{opacity:1;transform:none}
+}
+
+/* ── USER BAR ── */
+.user-bar{display:flex;align-items:center;gap:8px;margin-left:16px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.user-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.user-name{font-size:12px;font-weight:600;color:var(--text1)}
+.user-role{font-size:10px;color:var(--text3)}
+.user-menu-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;border-radius:3px;transition:all .15s;font-size:12px}
+.user-menu-btn:hover{color:var(--text1);background:var(--bg4)}
+
+/* ── SHARE MODAL ── */
+.share-modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;width:420px;max-width:95vw}
+.share-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.share-section{margin-bottom:14px}
+.share-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.share-code-box{display:flex;gap:6px;align-items:center}
+.share-code{flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--blue);letter-spacing:.05em}
+.share-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.share-toggle-label{font-size:12px;color:var(--text2)}
+.toggle-switch{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border);border-radius:10px;transition:all .2s}
+.toggle-track::after{content:'';position:absolute;width:14px;height:14px;background:var(--text3);border-radius:50%;top:2px;left:2px;transition:all .2s}
+.toggle-switch input:checked + .toggle-track{background:var(--blue);border-color:var(--blue)}
+.toggle-switch input:checked + .toggle-track::after{left:18px;background:#fff}
+.share-import-box{display:flex;gap:6px}
+.share-import-input{flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text1)}
+.share-import-input::placeholder{color:var(--text3);font-family:'Sarabun',sans-serif;font-size:12px}
+.share-info{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6}
+
+/* ── Friends Modal ── */
+.friends-modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;width:420px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column}
+.friends-title{font-size:15px;font-weight:700;color:var(--text1);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.friend-add-box{display:flex;gap:6px}
+.friend-add-input{flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text1);text-transform:uppercase}
+.friend-add-input::placeholder{color:var(--text3);font-family:'Sarabun',sans-serif;font-size:12px;text-transform:none}
+.friend-add-status{font-size:11px;margin-top:6px;line-height:1.6;min-height:14px}
+.friends-list-section{margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex:1;overflow-y:auto;min-height:0}
+.friend-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-radius:var(--radius-sm);transition:background .15s}
+.friend-row:hover{background:var(--bg3)}
+.friend-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.friend-info{flex:1;min-width:0}
+.friend-name{font-size:13px;color:var(--text1);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.friend-meta{font-size:10px;color:var(--text3);margin-top:1px}
+.friend-view-btn{font-size:11px;padding:5px 10px;border-radius:var(--radius-sm);background:var(--blue-dim);border:1px solid rgba(88,166,255,.3);color:var(--blue);cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:500;flex-shrink:0;transition:all .15s}
+.friend-view-btn:hover{background:var(--blue);color:#fff}
+.friend-view-btn.is-viewing{background:var(--blue);color:#fff}
+.friend-remove-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:4px;flex-shrink:0;transition:all .15s}
+.friend-remove-btn:hover{color:var(--red);background:rgba(248,81,73,.1)}
+
+/* ── Viewing-friend banner (read-only mode) ── */
+.viewing-banner{display:none;align-items:center;gap:10px;padding:9px 16px;background:linear-gradient(135deg,rgba(188,140,255,.1),rgba(88,166,255,.08));border-bottom:1px solid rgba(188,140,255,.25);font-size:12px;color:var(--text1)}
+.viewing-banner.active{display:flex}
+.viewing-banner .vb-icon{color:var(--purple);font-size:15px}
+.viewing-banner strong{color:var(--purple)}
+.viewing-banner .vb-back{margin-left:auto;font-size:11px;padding:5px 11px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border2);color:var(--text1);cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:500;transition:all .15s}
+.viewing-banner .vb-back:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── DROPDOWN MENU ── */
+.dropdown{position:relative}
+.dropdown-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;display:none}
+.dropdown-menu.open{display:block}
+.dropdown-item{display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:13px;color:var(--text1);cursor:pointer;border:none;background:none;width:100%;font-family:'Sarabun',sans-serif;transition:background .15s;text-align:left}
+.dropdown-item:hover{background:var(--bg3)}
+.dropdown-item.danger{color:var(--red)}
+.dropdown-item.danger:hover{background:rgba(248,81,73,.1)}
+.dropdown-divider{height:1px;background:var(--border);margin:4px 0}
+
+/* responsive */
+@media(max-width:768px){
+  .monthly-grid{grid-template-columns:1fr}
+  .left-rail{border-right:none;border-bottom:1px solid var(--border)}
+  .week-layout{flex-direction:column}
+  .week-sidebar{width:100%;min-width:0}
+}
+.ic{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em;vertical-align:-0.125em}
+.ic svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     LANDING PAGE — shown before sign-in
+══════════════════════════════════════════════ -->
+<!-- Ambient glow orbs -->
+<div class="land-orbs" aria-hidden="true">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div id="landing">
+
+  <nav class="land-nav">
+    <div class="land-nav-inner">
+      <div class="logo-icon">✦</div>
+      <div class="land-nav-name">Smart Calendar</div>
+      <div class="land-nav-links">
+        <button class="land-nav-link" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">ฟีเจอร์</button>
+        <button class="land-nav-link" onclick="document.getElementById('how-it-works').scrollIntoView({behavior:'smooth'})">วิธีใช้</button>
+      </div>
+      <button class="land-nav-cta" style="margin-left:auto" onclick="doGoogleLogin()">เข้าสู่ระบบ →</button>
+    </div>
+  </nav>
+
+  <div class="land-hero">
+    <div class="reveal">
+      <div class="land-eyebrow"><span class="dot"></span>ทำตารางเรียนเสร็จใน 10 วินาที</div>
+      <h1 class="land-h1">ตารางเรียนยุ่งๆ<br>กลายเป็นปฏิทิน<span class="accent">เป๊ะๆ</span><br>ด้วย<span class="accent2">AI</span></h1>
+      <p class="land-sub">วางข้อความที่อาจารย์ส่งมา หรือพิมพ์เอง แล้วให้ AI จัดเรียงเป็นปฏิทินและตารางสอนให้ทันที ไม่ต้องพิมพ์มือทีละวิชา</p>
+      <div class="land-cta-row">
+        <button class="land-cta" onclick="doGoogleLogin()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          เริ่มต้นใช้งานด้วย Google
+        </button>
+        <div class="land-cta-note">✓ ฟรี &nbsp;✓ ไม่มีบัตรเครดิต &nbsp;✓ ใช้ได้ทันที</div>
+      </div>
+      <div class="land-stats">
+        <div class="land-stat"><b>100%</b><span>ฟรี ไม่มีค่าใช้จ่าย</span></div>
+        <div class="land-stat-divider"></div>
+        <div class="land-stat"><b>AI</b><span>วิเคราะห์อัตโนมัติ</span></div>
+        <div class="land-stat-divider"></div>
+        <div class="land-stat"><b>Sync</b><span>บัญชี Google</span></div>
+      </div>
+    </div>
+
+    <div class="land-visual reveal" style="transition-delay:.15s">
+      <div class="morph-stage">
+        <div class="morph-scrap">
+          จันทร์ <b>GEN67-141</b> 08:00-10:00 AD1302<br>
+          <span class="strike">อังคาร CVE67-310 12:00</span><br>
+          อังคาร <b>CVE67-311</b> 12:00-14:00 AD1110<br>
+          พฤหัส <b>CVE67-341</b> 12:00-14:00 07211<br>
+          ศุกร์ <b>CVE67-371</b> 07:00-08:00 03211<br>
+          ศุกร์ <b>CVE67-312</b> 13:00-14:00 07211<br>
+          เสาร์ <b>CVE67-351</b> 17:00-19:00 ปฏิบัติ
+        </div>
+        <div class="morph-grid">
+          <div class="morph-grid-head">
+            <div class="morph-grid-title">ตารางเรียนรายสัปดาห์</div>
+            <div class="morph-grid-pill">จัดเรียงแล้ว</div>
+          </div>
+          <div class="morph-week">
+            <div class="morph-day"><div class="morph-day-label">จันทร์</div>
+              <div class="morph-chip" style="background:#58a6ff;animation-delay:.1s">GEN67-141</div>
+            </div>
+            <div class="morph-day"><div class="morph-day-label">อังคาร</div>
+              <div class="morph-chip" style="background:#39d353;animation-delay:.2s">CVE67-311</div>
+            </div>
+            <div class="morph-day"><div class="morph-day-label">พฤหัส</div>
+              <div class="morph-chip" style="background:#d29922;animation-delay:.3s">CVE67-341</div>
+            </div>
+            <div class="morph-day"><div class="morph-day-label">ศุกร์</div>
+              <div class="morph-chip" style="background:#bc8cff;animation-delay:.4s">CVE67-371</div>
+              <div class="morph-chip" style="background:#f85149;animation-delay:.5s">CVE67-312</div>
+            </div>
+            <div class="morph-day"><div class="morph-day-label">เสาร์</div>
+              <div class="morph-chip" style="background:#58a6ff;animation-delay:.6s">CVE67-351</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="morph-badge"><span class="spark">✦</span>AI วิเคราะห์และจัดตารางให้อัตโนมัติ</div>
+    </div>
+  </div>
+
+  <div class="land-section" id="features">
+    <div class="land-section-head reveal">
+      <div class="land-section-eyebrow">ฟีเจอร์</div>
+      <div class="land-section-title">ทุกวิธีที่ตารางเรียนเข้ามาในชีวิตคุณ Smart Calendar รับมือได้หมด</div>
+    </div>
+    <div class="land-features">
+      <div class="land-feat reveal">
+        <div class="land-feat-icon"><i class="ic" data-icon="sparkles"></i></div>
+        <div class="land-feat-title">AI จัดตารางให้อัตโนมัติ</div>
+        <div class="land-feat-desc">วางข้อความตารางเรียนแบบไหนก็ได้ ไม่ว่าจะเรียงมั่วหรือพิมพ์มาแบบรีบๆ AI จะแยกวัน เวลา รหัสวิชา และห้องเรียนให้ถูกต้องเอง</div>
+      </div>
+      <div class="land-feat reveal" style="transition-delay:.08s">
+        <div class="land-feat-icon"><i class="ic" data-icon="calendar-month"></i></div>
+        <div class="land-feat-title">ปฏิทินรายเดือน + ตารางรายสัปดาห์</div>
+        <div class="land-feat-desc">ดูภาพรวมทั้งเดือนแบบปฏิทิน หรือสลับไปดูตารางสอนแบบรายสัปดาห์เหมือนตารางเรียนจริง เลือกมุมมองที่ใช้งานง่ายที่สุดสำหรับคุณ</div>
+      </div>
+      <div class="land-feat reveal" style="transition-delay:.16s">
+        <div class="land-feat-icon"><i class="ic" data-icon="share"></i></div>
+        <div class="land-feat-title">แชร์ปฏิทินกับเพื่อน</div>
+        <div class="land-feat-desc">แจกรหัสแชร์ให้เพื่อนดูตารางเรียนของคุณแบบ read-only เหมาะกับทีมโปรเจกต์หรือกลุ่มเรียนที่ต้องนัดเวลาตรงกัน</div>
+      </div>
+      <div class="land-feat reveal" style="transition-delay:.04s">
+        <div class="land-feat-icon"><i class="ic" data-icon="clipboard-text"></i></div>
+        <div class="land-feat-title">นำเข้าแบบ Bulk</div>
+        <div class="land-feat-desc">วางตารางทั้งเทอมทีเดียวแล้ววิเคราะห์รวด ไม่ต้องเพิ่มทีละวิชา ประหยัดเวลาตอนเปิดเทอมใหม่</div>
+      </div>
+      <div class="land-feat reveal" style="transition-delay:.12s">
+        <div class="land-feat-icon"><i class="ic" data-icon="download"></i></div>
+        <div class="land-feat-title">ข้อมูลอยู่กับคุณเสมอ</div>
+        <div class="land-feat-desc">เข้าสู่ระบบด้วย Google บัญชีเดียว ข้อมูลซิงค์อัตโนมัติผ่าน Firebase และส่งออกตารางเป็นไฟล์ได้ทุกเมื่อ</div>
+      </div>
+      <div class="land-feat reveal" style="transition-delay:.20s">
+        <div class="land-feat-icon"><i class="ic" data-icon="chart-bar"></i></div>
+        <div class="land-feat-title">สถิติและการวิเคราะห์</div>
+        <div class="land-feat-desc">ดูสถิติกิจกรรมทั้งเดือน AI วิเคราะห์ตารางและแจ้งเตือนเมื่อคาบซ้อน หรือมีกิจกรรมหนักเกินในวันเดียว</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HOW IT WORKS ══ -->
+  <div class="land-steps" id="how-it-works">
+    <div class="land-steps-head reveal">
+      <div class="land-section-eyebrow" style="text-align:center;margin-bottom:10px">วิธีใช้งาน</div>
+      <div class="land-section-title" style="text-align:center;font-size:22px">3 ขั้นตอน พร้อมใช้ทันที</div>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">01</div>
+        <div class="step-title">วางข้อความตารางเรียน</div>
+        <div class="step-desc">คัดลอกข้อความที่อาจารย์ส่งมาไม่ว่าจะรูปแบบไหน แล้ววางลงในช่อง</div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.1s">
+        <div class="step-num">02</div>
+        <div class="step-title">กด "วิเคราะห์กิจกรรม"</div>
+        <div class="step-desc">AI จะแยกวัน เวลา รหัสวิชา และห้องเรียนให้ครบภายในไม่กี่วินาที</div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.2s">
+        <div class="step-num">03</div>
+        <div class="step-title">ปฏิทินพร้อมแล้ว!</div>
+        <div class="step-desc">ข้อมูลซิงค์กับบัญชี Google แชร์ให้เพื่อน หรือส่งออกเป็นไฟล์ได้เลย</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SOCIAL PROOF ══ -->
+  <div class="land-social">
+    <div class="social-head reveal">
+      <div class="land-section-eyebrow" style="text-align:center;margin-bottom:8px">เทคโนโลยี</div>
+    </div>
+    <div class="social-badges reveal">
+      <div class="social-badge"><span class="social-badge-icon">✦</span><div><strong>AI</strong><br>วิเคราะห์ตารางภาษาไทย/อังกฤษ</div></div>
+      <div class="social-badge"><span class="social-badge-icon">🔥</span><div><strong>Firebase</strong><br>ซิงค์ข้อมูลแบบ real-time</div></div>
+      <div class="social-badge"><span class="social-badge-icon">🔒</span><div><strong>Google OAuth</strong><br>ปลอดภัย ไม่เก็บรหัสผ่าน</div></div>
+      <div class="social-badge"><span class="social-badge-icon">📱</span><div><strong>Responsive</strong><br>ใช้ได้ทั้งมือถือและคอม</div></div>
+    </div>
+  </div>
+
+  <div class="land-final">
+    <div class="land-final-card reveal">
+      <div class="land-final-glow"></div>
+      <div class="land-final-title">พร้อมเริ่มจัดตารางเรียนแล้วหรือยัง?</div>
+      <div class="land-final-sub">เข้าสู่ระบบด้วย Google ใช้เวลาไม่ถึงนาที ไม่ต้องตั้งรหัสผ่าน ไม่ต้องยืนยันอีเมล</div>
+      <button class="land-cta" onclick="doGoogleLogin()" style="margin:0 auto">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        เริ่มต้นใช้งานด้วย Google
+      </button>
+    </div>
+  </div>
+
+  <div class="land-foot">Smart Calendar — เครื่องมือจัดตารางเรียนฟรี</div>
+</div>
+
+<div class="app hidden" id="app">
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-logo">
+      <div class="logo-icon">✦</div>
+      Smart Calendar
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('monthly')"><i class="ic" data-icon="calendar-month"></i>ปฏิทินรายเดือน</button>
+      <button class="tab" onclick="switchTab('weekly')"><i class="ic" data-icon="layout-grid"></i>ตารางเรียน</button>
+    </div>
+    <!-- USER BAR -->
+    <div class="dropdown" id="userDropdown" style="display:none">
+      <div class="user-bar" onclick="toggleUserMenu()" style="cursor:pointer">
+        <div class="user-avatar" id="userAvatar" style="background:var(--blue)">U</div>
+        <div>
+          <div class="user-name" id="userNameDisplay">ผู้ใช้</div>
+          <div class="user-role" id="userRoleDisplay">ส่วนตัว</div>
+        </div>
+        <span class="user-menu-btn">▾</span>
+      </div>
+      <div class="dropdown-menu" id="userMenu">
+        <button class="dropdown-item" onclick="openShareModal()"><i class="ic" data-icon="share"></i>แชร์ปฏิทิน</button>
+        <button class="dropdown-item" onclick="openFriendsModal()"><i class="ic" data-icon="users"></i>เพื่อน</button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item danger" onclick="doLogout()"><i class="ic" data-icon="logout"></i>ออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEWING FRIEND BANNER -->
+  <div class="viewing-banner" id="viewingBanner">
+    <i class="ic vb-icon" data-icon="users"></i>
+    กำลังดูปฏิทินของ <strong id="viewingFriendName">-</strong> <span style="color:var(--text3)">(อ่านอย่างเดียว)</span>
+    <button class="vb-back" onclick="exitFriendView()"><i class="ic" data-icon="x"></i> กลับมาดูของฉัน</button>
+  </div>
+
+  <!-- ══ MONTHLY PANE ══ -->
+  <div class="pane active" id="pane-monthly">
+    <div class="monthly-grid">
+      <!-- LEFT RAIL -->
+      <div class="left-rail">
+
+        <!-- Text Input -->
+        <div class="rail-section">
+          <div class="section-label"><i class="ic" data-icon="pencil"></i>พิมพ์กิจกรรม</div>
+          <div class="smart-input">
+            <textarea id="textInput" placeholder="ตัวอย่าง:&#10;20 มิ.ย. นัดหมอ 10:00 น.&#10;ประชุมทีม 25/6 14:00&#10;ส่งรายงาน 30/6/68 17:00&#10;สอบ Final 15 ก.ค." oninput="updateCharCount()"></textarea>
+            <span class="char-count" id="charCount">0</span>
+          </div>
+          <div class="input-hint">รองรับ: วัน/เดือน, วัน เดือน ปี, เดือนไทย/อังกฤษ, เวลา 24h</div>
+
+          <!-- Category selector -->
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            <span class="section-label" style="margin-bottom:0;align-self:center"><i class="ic" data-icon="tag"></i>หมวด:</span>
+            <select id="evCategory" style="font-family:'Sarabun',sans-serif;font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text1)">
+              <option value="other">ทั่วไป</option>
+              <option value="work">งาน</option>
+              <option value="study">เรียน</option>
+              <option value="health">สุขภาพ</option>
+              <option value="personal">ส่วนตัว</option>
+            </select>
+          </div>
+
+          <button class="ai-btn" id="parseBtn" onclick="doParse()" style="margin-top:10px">
+            <span class="spark">✦</span>
+            วิเคราะห์กิจกรรม
+            <span class="ai-badge">AI</span>
+          </button>
+
+          <div class="status-bar" id="statusBar"></div>
+        </div>
+
+        <!-- Parsed Items -->
+        <div class="rail-section">
+          <div class="section-label"><i class="ic" data-icon="list-check"></i>กิจกรรมที่วิเคราะห์ได้</div>
+          <div class="parsed-list" id="parsedList">
+            <div class="empty-state"><i class="ic" data-icon="inbox"></i>ยังไม่มีกิจกรรม<br><small>พิมพ์ข้อความแล้วกด "วิเคราะห์"</small></div>
+          </div>
+        </div>
+
+        <!-- AI Insight -->
+        <div class="rail-section" id="aiInsightSection" style="display:none">
+          <div class="section-label"><i class="ic" data-icon="sparkles"></i>AI วิเคราะห์</div>
+          <div class="ai-panel">
+            <div class="ai-panel-header">
+              <span class="ai-panel-title">✦ การวิเคราะห์อัจฉริยะ</span>
+              <span class="ai-tag">Claude</span>
+            </div>
+            <div id="aiInsightContent">
+              <div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>กำลังวิเคราะห์...</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="rail-section">
+          <div class="section-label"><i class="ic" data-icon="chart-bar"></i>สถิติ</div>
+          <div class="mini-stats">
+            <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">กิจกรรมทั้งหมด</div></div>
+            <div class="stat-card"><div class="stat-num" id="statThisMonth">0</div><div class="stat-label">เดือนนี้</div></div>
+            <div class="stat-card"><div class="stat-num" id="statUpcoming">0</div><div class="stat-label">กิจกรรมต่อไป</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDAR PANEL -->
+      <div class="cal-panel" id="calPanel">
+        <div class="cal-header">
+          <button class="cal-nav" id="prevBtn" onclick="prevMonth()" aria-label="เดือนก่อน"><i class="ic" data-icon="chevron-left"></i></button>
+          <div>
+            <div class="cal-month-title" id="calMonth"></div>
+            <div class="cal-month-sub" id="calMonthSub"></div>
+          </div>
+          <button class="cal-nav" id="nextBtn" onclick="nextMonth()" aria-label="เดือนถัดไป"><i class="ic" data-icon="chevron-right"></i></button>
+          <div class="cal-header-right">
+            <button class="btn btn-sm" onclick="goToday()" data-tip="ไปวันนี้"><i class="ic" data-icon="calendar-event"></i></button>
+            <div class="view-toggle">
+              <button class="vt-btn active" onclick="setCalView('month',this)">เดือน</button>
+              <button class="vt-btn" onclick="setCalView('week',this)">สัปดาห์</button>
+            </div>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+
+        <!-- Selected day events -->
+        <div class="ev-section">
+          <div class="ev-section-title">
+            <span id="eventListTitle">กิจกรรมทั้งหมด</span>
+            <span class="ev-count-badge" id="evCountBadge">0</span>
+          </div>
+          <div id="eventList"><div class="empty-state"><i class="ic" data-icon="calendar-off"></i>ยังไม่มีกิจกรรม</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WEEKLY TIMETABLE PANE ══ -->
+  <div class="pane" id="pane-weekly">
+    <div class="week-pane">
+      <div class="week-layout">
+        <!-- Sidebar -->
+        <div class="week-sidebar">
+          <!-- Add course -->
+          <div class="sidebar-sec">
+            <div class="section-label"><i class="ic" data-icon="plus"></i>เพิ่มวิชาเรียน</div>
+            <div class="fi" style="margin-bottom:6px"><label>รหัสวิชา / ชื่อวิชา</label><input id="ci-code" placeholder="เช่น CVE67-332 / โครงสร้างข้อมูล"/></div>
+            <div class="form-row">
+              <div class="fi"><label>วัน</label>
+                <select id="ci-day">
+                  <option value="1">จันทร์</option><option value="2">อังคาร</option>
+                  <option value="3">พุธ</option><option value="4">พฤหัส</option>
+                  <option value="5">ศุกร์</option><option value="6">เสาร์</option>
+                  <option value="0">อาทิตย์</option>
+                </select>
+              </div>
+              <div class="fi"><label>ห้อง</label><input id="ci-room" placeholder="AD1302"/></div>
+            </div>
+            <div class="fi" style="margin-bottom:6px"><label>เวลา</label>
+              <div class="time-pair">
+                <input id="ci-start" placeholder="08:00" style="width:70px"/>
+                <span class="time-sep">—</span>
+                <input id="ci-end" placeholder="10:00" style="width:70px"/>
+              </div>
+            </div>
+            <!-- color picker -->
+            <div class="fi" style="margin-bottom:8px"><label>สีวิชา</label>
+              <div class="color-row" id="colorPicker">
+                <!-- generated by JS -->
+              </div>
+            </div>
+            <button class="btn btn-blue btn-full" onclick="addCourse()"><i class="ic" data-icon="plus"></i>เพิ่มวิชา</button>
+          </div>
+
+          <!-- Course list -->
+          <div class="sidebar-sec" style="flex:1">
+            <div class="section-label" style="margin-bottom:8px;display:flex;justify-content:space-between">
+              <span><i class="ic" data-icon="books"></i>วิชาทั้งหมด</span>
+              <button class="btn btn-ghost btn-sm" onclick="clearAllCourses()" style="padding:2px 6px;font-size:10px"><i class="ic" data-icon="trash"></i>ล้าง</button>
+            </div>
+            <div class="course-list" id="courseList"></div>
+          </div>
+
+          <!-- Bulk import -->
+          <div class="sidebar-sec">
+            <div class="section-label"><i class="ic" data-icon="clipboard-text"></i>นำเข้าแบบ Bulk</div>
+            <textarea class="paste-box" id="bulkInput" placeholder="จันทร์ GEN67-141 08:00-10:00 AD1302&#10;อังคาร CVE67-311 12:00-14:00 AD1110&#10;ศุกร์ CVE67-371 07:00-08:00 03211" style="margin-bottom:6px;min-height:70px"></textarea>
+            <div style="display:flex;gap:5px;margin-bottom:6px">
+              <button class="btn btn-sm" onclick="parseBulk()"><i class="ic" data-icon="wand"></i>วิเคราะห์</button>
+            </div>
+            <div class="status-bar" id="bulkStatus"></div>
+          </div>
+        </div>
+
+        <!-- Timetable -->
+        <div class="week-main">
+          <div class="week-header">
+            <div>
+              <div class="week-title">ตารางเรียนรายสัปดาห์</div>
+            </div>
+            <span class="week-subtitle" id="weekStats"></span>
+            <div style="display:flex;gap:6px;margin-left:12px">
+              <button class="btn btn-sm" onclick="exportSchedule()" data-tip="ส่งออก"><i class="ic" data-icon="download"></i>Export</button>
+            </div>
+          </div>
+          <div class="tt-scroll">
+            <table class="tt" id="timetable"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Course detail modal -->
+<div class="modal-overlay hidden" id="courseModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">ปิด</button>
+      <button class="btn btn-danger-sm" id="modalDelBtn" style="padding:7px 12px;border:1px solid rgba(248,81,73,.3);border-radius:var(--radius-sm);background:rgba(248,81,73,.08);color:var(--red)"><i class="ic" data-icon="trash"></i>ลบวิชา</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL (fallback — landing page is the primary entry point) -->
+<div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">✦</div>
+      <div>
+        <div class="auth-title">Smart Calendar</div>
+        <div class="auth-subtitle">เข้าสู่ระบบเพื่อบันทึกข้อมูลของคุณ</div>
+      </div>
+    </div>
+
+    <button class="auth-submit" onclick="doGoogleLogin()" style="background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay hidden" id="shareModal">
+  <div class="share-modal">
+    <div class="share-title"><i class="ic" data-icon="share"></i>แชร์ปฏิทิน</div>
+    <div class="share-section">
+      <div class="share-label">รหัสแชร์ของคุณ</div>
+      <div class="share-code-box">
+        <div class="share-code" id="shareCodeDisplay">-</div>
+        <button class="btn btn-sm" onclick="copyShareCode()"><i class="ic" data-icon="copy"></i>คัดลอก</button>
+      </div>
+      <div class="share-info">แจกรหัสนี้ให้เพื่อน เพื่อนนำไปใส่ในหน้า "เพื่อน" เพื่อแอดและดูปฏิทินของคุณได้ (read-only)</div>
+    </div>
+    <div class="share-section">
+      <div class="share-toggle-row">
+        <span class="share-toggle-label">เปิดให้คนอื่นดูปฏิทิน</span>
+        <label class="toggle-switch"><input type="checkbox" id="shareToggle" onchange="toggleShare()"/><div class="toggle-track"></div></label>
+      </div>
+      <div class="share-toggle-row">
+        <span class="share-toggle-label">รวมตารางเรียนด้วย</span>
+        <label class="toggle-switch"><input type="checkbox" id="shareCoursesToggle" onchange="toggleShare()"/><div class="toggle-track"></div></label>
+      </div>
+    </div>
+    <div class="share-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:0">
+      <div class="share-info">มีรหัสแชร์ของเพื่อนแล้ว? ไปที่เมนู <strong style="color:var(--text1)">"เพื่อน"</strong> เพื่อแอดและดูปฏิทินของเพื่อนได้ตลอด</div>
+      <button class="btn btn-blue btn-sm" style="margin-top:8px" onclick="closeShareModal();openFriendsModal()"><i class="ic" data-icon="users"></i>ไปที่หน้าเพื่อน</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeShareModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- FRIENDS MODAL -->
+<div class="modal-overlay hidden" id="friendsModal">
+  <div class="friends-modal">
+    <div class="friends-title"><i class="ic" data-icon="users"></i>เพื่อน</div>
+    <div class="share-label">แอดเพื่อนด้วยรหัสแชร์</div>
+    <div class="friend-add-box">
+      <input class="friend-add-input" id="friendCodeInput" placeholder="ใส่รหัสแชร์ของเพื่อน..." maxlength="6" onkeydown="if(event.key==='Enter')addFriend()"/>
+      <button class="btn btn-blue btn-sm" onclick="addFriend()">แอด</button>
+    </div>
+    <div class="friend-add-status" id="friendAddStatus"></div>
+
+    <div class="friends-list-section">
+      <div class="share-label">รายชื่อเพื่อน (<span id="friendCount">0</span>)</div>
+      <div id="friendsListEl">
+        <div class="empty-state" style="padding:16px"><i class="ic" data-icon="users"></i>ยังไม่มีเพื่อน<br><small>ใส่รหัสแชร์ของเพื่อนด้านบนเพื่อแอด</small></div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:14px">
+      <button class="btn" onclick="closeFriendsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+
+<script type="module">
+/* ══════════════════════════════════════════════
+   SVG ICON SYSTEM (replaces broken external icon font)
+══════════════════════════════════════════════ */
+const ICONS = {
+  'calendar-month': '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M8 17h2M14 14h2M14 17h2"/>',
+  'layout-grid': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  'pencil': '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  'tag': '<path d="M12 2H2v10l9.3 9.3a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8Z"/><circle cx="6.5" cy="6.5" r="1.5"/>',
+  'list-check': '<path d="M3 6h1M3 12h1M3 18h1M7 6h14M7 12h14M7 18h9"/>',
+  'inbox': '<path d="M3 9l3-6h12l3 6M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M3 9h6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2h6"/>',
+  'sparkles': '<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5Z"/><path d="M5 17l.7 2.1L8 20l-2.3.9L5 23l-.7-2.1L2 20l2.3-.9Z"/>',
+  'chart-bar': '<path d="M3 21h18M7 21V10M12 21V6M17 21v-8"/>',
+  'chevron-left': '<polyline points="15 18 9 12 15 6"/>',
+  'chevron-right': '<polyline points="9 18 15 12 9 6"/>',
+  'calendar-event': '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15" r="1.5"/>',
+  'calendar-off': '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M5 5l14 14"/>',
+  'calendar-x': '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9.5 14.5l5 5M14.5 14.5l-5 5"/>',
+  'plus': '<path d="M12 5v14M5 12h14"/>',
+  'books': '<path d="M5 4h2a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a3 3 0 0 1 3-3ZM12 4h2a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1h-4M17 6l3 .8a2 2 0 0 1 1.4 2.4l-3 11.6a1 1 0 0 1-1.2.7l-1.7-.4"/>',
+  'trash': '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>',
+  'clipboard-text': '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v2H9zM8 11h8M8 15h5"/>',
+  'wand': '<path d="M6 21l12-12M15 6l1.5-1.5M19 10l1.5-1.5M11 2l1.5 1.5M3 9l1.5 1.5"/><path d="M17 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z"/>',
+  'download': '<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  'x': '<path d="M18 6L6 18M6 6l12 12"/>',
+  'door': '<path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h18M14 12v.01"/>',
+  'check': '<polyline points="20 6 9 17 4 12"/>',
+  'share': '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>',
+  'copy': '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  'logout': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  'users': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+};
+function renderIcons(root) {
+  (root || document).querySelectorAll('i.ic[data-icon]:not([data-rendered])').forEach(el => {
+    const name = el.getAttribute('data-icon');
+    const path = ICONS[name];
+    el.setAttribute('data-rendered', '1');
+    if (path) {
+      el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+    }
+  });
+}
+renderIcons();
+new MutationObserver(muts => {
+  for (const m of muts) {
+    if (m.type === 'childList' && m.addedNodes.length) { renderIcons(); return; }
+  }
+}).observe(document.body, {childList: true, subtree: true});
+
+/* ══════════════════════════════════════════════
+   DATA & CONSTANTS
+══════════════════════════════════════════════ */
+let events = [], courses = [];
+let curYear = new Date().getFullYear(), curMonth = new Date().getMonth(), selDate = null;
+let selectedColor = '#1a6fb5';
+let modalCourseId = null;
+
+/* ── Friend viewing state ──
+   When viewing a friend's calendar, we NEVER touch `events`/`courses` (the
+   user's own data). Instead we hold the friend's data separately and all
+   render functions read from activeEvents()/activeCourses() which pick
+   the right source depending on viewState.active. */
+let viewState = { active: 'me', friendUid: null, friendName: '', friendEvents: [], friendCourses: [] };
+let friendsList = []; // [{uid, shareCode, displayName, eventCount}]
+function activeEvents()  { return viewState.active === 'friend' ? viewState.friendEvents  : events; }
+function activeCourses() { return viewState.active === 'friend' ? viewState.friendCourses : courses; }
+function isViewingFriend() { return viewState.active === 'friend'; }
+
+const PALETTE = [
+  '#1a6fb5','#10a87d','#c0392b','#8e44ad','#d4880a',
+  '#0e6655','#2471a3','#7d3c98','#1e8449','#b7950b',
+  '#884ea0','#117a65','#1a5276','#6e2f1a','#1b4f72'
+];
+const DAY_NAMES = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const DAY_FULL  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const THAI_MONTHS = {'ม.ค.':1,'มกราคม':1,'ก.พ.':2,'กุมภาพันธ์':2,'มี.ค.':3,'มีนาคม':3,'เม.ย.':4,'เมษายน':4,'พ.ค.':5,'พฤษภาคม':5,'มิ.ย.':6,'มิถุนายน':6,'ก.ค.':7,'กรกฎาคม':7,'ส.ค.':8,'สิงหาคม':8,'ก.ย.':9,'กันยายน':9,'ต.ค.':10,'ตุลาคม':10,'พ.ย.':11,'พฤศจิกายน':11,'ธ.ค.':12,'ธันวาคม':12};
+const TH_MONTHS_LIST = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const CAT_LABELS = {work:'งาน',study:'เรียน',health:'สุขภาพ',personal:'ส่วนตัว',other:'ทั่วไป'};
+const CAT_ICONS  = {work:'briefcase',study:'books',health:'heartbeat',personal:'user',other:'calendar'};
+
+/* ══ TABS ══ */
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['monthly','weekly'][i] === t));
+  document.querySelectorAll('.pane').forEach(el => el.classList.remove('active'));
+  document.getElementById('pane-' + t).classList.add('active');
+}
+
+/* ══ CHAR COUNT ══ */
+function updateCharCount() {
+  const v = document.getElementById('textInput').value.length;
+  document.getElementById('charCount').textContent = v || '';
+}
+
+/* ══ DATE PARSING ══ */
+function thaiMonthPat() { return Object.keys(THAI_MONTHS).sort((a,b) => b.length-a.length).join('|'); }
+function parseDate(text) {
+  const now = new Date(); let d,m,y,r;
+  const pat = thaiMonthPat();
+  r = text.match(/(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})/);
+  if(r){d=+r[1];m=+r[2];y=+r[3];if(y<100)y+=2500;if(y>2400)y-=543;return{d,m,y};}
+  r = text.match(/(\d{1,2})[/\-](\d{1,2})/);
+  if(r){d=+r[1];m=+r[2];y=now.getFullYear();return{d,m,y};}
+  r = text.match(new RegExp('(\\d{1,2})\\s+('+pat+')(\\s+(\\d{2,4}))?','u'));
+  if(r){d=+r[1];m=THAI_MONTHS[r[2]];y=r[4]?+r[4]:now.getFullYear();if(y<100)y+=2500;if(y>2400)y-=543;return{d,m,y};}
+  r = text.match(new RegExp('('+pat+')\\s*(\\d{1,2})(\\s+(\\d{2,4}))?','u'));
+  if(r){m=THAI_MONTHS[r[1]];d=+r[2];y=r[4]?+r[4]:now.getFullYear();if(y<100)y+=2500;if(y>2400)y-=543;return{d,m,y};}
+  return null;
+}
+function parseTime(text) {
+  let r = text.match(/(\d{1,2})[:.ː](\d{2})\s*(?:น\.?)?/);
+  if(r) return r[1].padStart(2,'0') + ':' + r[2];
+  r = text.match(/(\d{1,2})\s*(?:น\.?|โมง)/);
+  if(r) return r[1].padStart(2,'0') + ':00';
+  return '';
+}
+function extractActivity(text) {
+  const pat = thaiMonthPat();
+  let t = text.replace(/\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?/g,'')
+    .replace(new RegExp('(\\d{1,2}\\s+)?('+pat+')(\\s+\\d{2,4})?','gu'),'')
+    .replace(/วันที่\s?/g,'').replace(/\d{1,2}[:.]\d{2}(?:\s*(?:น\.?))?/g,'')
+    .replace(/\d{1,2}\s*(?:น\.?|โมง)/g,'').replace(/เวลา:?/g,'')
+    .replace(/\s{2,}/g,' ').trim();
+  return t || text;
+}
+
+/* guess category from text */
+function guessCategory(text, explicit) {
+  if(explicit && explicit !== 'other') return explicit;
+  const t = text.toLowerCase();
+  if(/สอบ|เรียน|การบ้าน|โปรเจค|ส่งงาน|ส่งรายงาน|assignment|homework|exam|quiz|project/.test(t)) return 'study';
+  if(/ประชุม|งาน|นำเสนอ|presentation|meeting|deadline|บรีฟ|report/.test(t)) return 'work';
+  if(/หมอ|นัดหมอ|ยา|ออกกำลัง|โรงพยาบาล|clinic|gym|วิ่ง|สุขภาพ|doctor|hospital/.test(t)) return 'health';
+  if(/ครอบครัว|เพื่อน|ท่องเที่ยว|ปาร์ตี้|วันเกิด|birthday|dinner|lunch/.test(t)) return 'personal';
+  return 'other';
+}
+
+function parseLines(raw) {
+  const lines = raw.split(/[\n;]+/).map(l=>l.trim()).filter(Boolean);
+  const results = []; let lastDate = null;
+  const explicitCat = document.getElementById('evCategory').value;
+  lines.forEach(line => {
+    const dt = parseDate(line);
+    if(dt) lastDate = dt;
+    const usedDate = dt || lastDate;
+    const time = parseTime(line);
+    const activity = extractActivity(line);
+    const cat = guessCategory(activity, explicitCat);
+    if(activity.length > 1) results.push({text: activity, date: usedDate, time, raw: line, cat});
+  });
+  return results;
+}
+
+/* ══ PARSE & RENDER ══ */
+function doParse() {
+  const raw = document.getElementById('textInput').value.trim();
+  if(!raw){showStatus('กรุณาพิมพ์ข้อความก่อน','warn');return;}
+  const items = parseLines(raw);
+  showStatus(items.length ? `✦ พบ ${items.length} กิจกรรม` : 'ไม่พบรูปแบบวันที่','info');
+  renderParsed(items);
+  if(items.length > 0) doAIInsight(items, raw);
+}
+
+function renderParsed(items) {
+  const el = document.getElementById('parsedList');
+  if(!items.length){
+    el.innerHTML = '<div class="empty-state"><i class="ic" data-icon="calendar-x"></i>ไม่พบรูปแบบวันที่<br><small>ลอง: 20 มิ.ย. / 20/6 / 30-06-68</small></div>';
+    return;
+  }
+  el.innerHTML = items.map((it,i) => {
+    const short = Object.keys(THAI_MONTHS).find(k => THAI_MONTHS[k] === it.date?.m && k.includes('.')) || '';
+    const dStr = it.date ? `${it.date.d} ${short||TH_MONTHS_LIST[(it.date.m||1)-1].slice(0,3)}` : '?';
+    const catClass = `cat-${it.cat}`;
+    return `<div class="parsed-item" id="pi${i}" onclick="addEvent(${i})">
+      <div class="pi-left">
+        <div class="pi-header">
+          <span class="pi-date">${dStr}</span>
+          ${it.time ? `<span class="pi-time">${it.time}</span>` : ''}
+          <span class="pi-cat ${catClass}">${CAT_LABELS[it.cat]||'ทั่วไป'}</span>
+        </div>
+        <div class="pi-text">${it.text}</div>
+      </div>
+      <span class="pi-add">＋</span>
+    </div>`;
+  }).join('');
+  el._items = items;
+}
+
+function addEvent(i) {
+  const el = document.getElementById('parsedList');
+  const item = el._items[i]; if(!item) return;
+  const pi = document.getElementById('pi'+i);
+  if(pi.classList.contains('added')){showStatus('เพิ่มไปแล้ว','info');return;}
+  events.push({id: Date.now()+i, text: item.text, date: item.date, time: item.time, cat: item.cat});
+  pi.classList.add('added');
+  pi.querySelector('.pi-add').textContent = '✓';
+  renderCalendar(); renderEventList(); updateStats();
+  showStatus(`✓ เพิ่ม "${item.text}" แล้ว`,'ok');
+  saveUserData();
+}
+
+function showStatus(msg, type='info') {
+  const el = document.getElementById('statusBar');
+  el.className = 'status-bar status-'+type;
+  el.textContent = msg;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.textContent = '', 4000);
+}
+
+/* ══ AI INSIGHT ══ */
+async function doAIInsight(items, rawText) {
+  const sec = document.getElementById('aiInsightSection');
+  sec.style.display = 'block';
+  document.getElementById('aiInsightContent').innerHTML = `<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>AI กำลังวิเคราะห์กิจกรรม...</span></div>`;
+
+  const summary = items.map(it => {
+    const dt = it.date ? `${it.date.d}/${it.date.m}/${it.date.y}` : 'ไม่ระบุวัน';
+    return `- ${it.text} (${dt}${it.time ? ' '+it.time : ''}) [${CAT_LABELS[it.cat]}]`;
+  }).join('\n');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `คุณเป็น AI ผู้ช่วยวางแผนชีวิตชาวไทย วิเคราะห์กิจกรรมต่อไปนี้แล้วให้คำแนะนำเป็นภาษาไทย กระชับ ใช้ได้จริง ไม่เยิ่นเย้อ:
+
+กิจกรรมที่พบ:
+${summary}
+
+ตอบในรูปแบบ JSON เท่านั้น ดังนี้:
+{
+  "summary": "สรุปภาพรวมกิจกรรม 1-2 ประโยค",
+  "busy_days": ["วันที่ยุ่งที่สุด"],
+  "warnings": ["คำเตือนหรือข้อควรระวัง ถ้ามี"],
+  "tips": ["เคล็ดลับการจัดการเวลา 2-3 ข้อ"],
+  "priority": "กิจกรรมที่สำคัญที่สุดที่ควรจัดก่อน"
+}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(c => c.text||'').join('') || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+
+    document.getElementById('aiInsightContent').innerHTML = `
+      <div class="ai-result">
+        <p>${parsed.summary || ''}</p>
+        ${parsed.priority ? `<h4>⭐ ลำดับความสำคัญ</h4><p class="highlight">${parsed.priority}</p>` : ''}
+        ${parsed.busy_days?.length ? `<h4>📅 วันที่ยุ่ง</h4><p>${parsed.busy_days.join(', ')}</p>` : ''}
+        ${parsed.warnings?.length ? `<h4>⚠️ ข้อควรระวัง</h4><ul>${parsed.warnings.map(w=>`<li class="warn">${w}</li>`).join('')}</ul>` : ''}
+        ${parsed.tips?.length ? `<h4>💡 เคล็ดลับ</h4><ul>${parsed.tips.map(t=>`<li class="good">${t}</li>`).join('')}</ul>` : ''}
+      </div>`;
+  } catch(e) {
+    document.getElementById('aiInsightContent').innerHTML = `<div class="ai-result"><p style="color:var(--text3)">ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้</p></div>`;
+  }
+}
+
+/* ══ CALENDAR RENDER ══ */
+function thaiMonthName(m) { return TH_MONTHS_LIST[(m-1)] || ''; }
+function renderCalendar() {
+  const title = thaiMonthName(curMonth+1) + ' ' + (curYear+543);
+  document.getElementById('calMonth').textContent = title;
+  document.getElementById('calMonthSub').textContent = thaiMonthName(curMonth+1) + ' ' + curYear + ' CE';
+
+  const grid = document.getElementById('calGrid');
+  const today = new Date();
+  let html = DAY_NAMES.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const first = new Date(curYear, curMonth, 1);
+  const startDow = first.getDay();
+  const dim = new Date(curYear, curMonth+1, 0).getDate();
+  const prev = new Date(curYear, curMonth, 0).getDate();
+
+  const evMap = {};
+  activeEvents().forEach(ev => {
+    if(ev.date && ev.date.m === curMonth+1 && ev.date.y === curYear) {
+      const k = ev.date.d; if(!evMap[k]) evMap[k] = []; evMap[k].push(ev);
+    }
+  });
+
+  for(let i=0; i<startDow; i++)
+    html += `<div class="cal-cell other-month"><div class="day-num">${prev-startDow+1+i}</div></div>`;
+
+  for(let d=1; d<=dim; d++) {
+    const isToday = today.getDate()===d && today.getMonth()===curMonth && today.getFullYear()===curYear;
+    const isSel = selDate && selDate.d===d && selDate.m===curMonth+1 && selDate.y===curYear;
+    const evs = evMap[d] || [];
+    const cls = ['cal-cell', isToday?'today':'', isSel?'selected':''].filter(Boolean).join(' ');
+    html += `<div class="${cls}" onclick="selectDate(${d})">
+      <div class="day-num">${d}</div>
+      <div class="day-events">
+        ${evs.slice(0,2).map(ev => {
+          const color = catColor(ev.cat);
+          return `<div class="day-ev-chip" style="background:${color}" title="${ev.text}">${ev.text}</div>`;
+        }).join('')}
+        ${evs.length > 2 ? `<div class="day-more">+${evs.length-2} อื่น</div>` : ''}
+      </div>
+    </div>`;
+  }
+  const rem = 42 - (startDow + dim);
+  for(let d=1; d<=rem && d<8; d++)
+    html += `<div class="cal-cell other-month"><div class="day-num">${d}</div></div>`;
+
+  grid.innerHTML = html;
+}
+
+function catColor(cat) {
+  const map = {work:'#58a6ff',study:'#d29922',health:'#3fb950',personal:'#bc8cff',other:'#6e7681'};
+  return map[cat] || map.other;
+}
+
+function selectDate(d) {
+  selDate = {d, m: curMonth+1, y: curYear};
+  renderCalendar(); renderEventList();
+}
+
+function prevMonth() {
+  curMonth--;
+  if(curMonth < 0){ curMonth = 11; curYear--; }
+  selDate = null;
+  renderCalendar(); renderEventList();
+}
+
+function nextMonth() {
+  curMonth++;
+  if(curMonth > 11){ curMonth = 0; curYear++; }
+  selDate = null;
+  renderCalendar(); renderEventList();
+}
+
+function goToday() {
+  curYear = new Date().getFullYear(); curMonth = new Date().getMonth(); selDate = null;
+  renderCalendar(); renderEventList();
+}
+
+function setCalView(v, btn) {
+  document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderEventList() {
+  const el = document.getElementById('eventList');
+  const title = document.getElementById('eventListTitle');
+  const badge = document.getElementById('evCountBadge');
+  const src = activeEvents();
+  let filtered = src;
+  if(selDate) {
+    filtered = src.filter(ev => ev.date && ev.date.d===selDate.d && ev.date.m===selDate.m && ev.date.y===selDate.y);
+    title.textContent = `${selDate.d} ${thaiMonthName(selDate.m)} ${selDate.y+543}`;
+  } else {
+    title.textContent = 'กิจกรรมทั้งหมด';
+  }
+  badge.textContent = filtered.length;
+  if(!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><i class="ic" data-icon="calendar-off"></i>${selDate?'ไม่มีกิจกรรมในวันนี้':'ยังไม่มีกิจกรรม'}<br><small>${isViewingFriend()?'เพื่อนยังไม่มีกิจกรรม':'พิมพ์ข้อความแล้วกด "วิเคราะห์"'}</small></div>`;
+    return;
+  }
+  const readOnly = isViewingFriend();
+  el.innerHTML = filtered.sort((a,b) => (a.time||'').localeCompare(b.time||'')).map(ev => {
+    const color = catColor(ev.cat);
+    const cat = ev.cat || 'other';
+    return `<div class="ev-item">
+      <div class="ev-color-bar" style="background:${color}"></div>
+      <div class="ev-info">
+        <div class="ev-name">${ev.text}</div>
+        <div class="ev-meta">
+          ${ev.date ? `<span>${ev.date.d} ${thaiMonthName(ev.date.m)}</span>` : ''}
+          ${ev.time ? `<span class="ev-time-chip">${ev.time}</span>` : ''}
+          <span class="ev-cat-chip cat-${cat}">${CAT_LABELS[cat]||'ทั่วไป'}</span>
+        </div>
+      </div>
+      ${readOnly ? '' : `<button class="ev-del" onclick="delEvent(${ev.id})" title="ลบ"><i class="ic" data-icon="trash"></i></button>`}
+    </div>`;
+  }).join('');
+}
+
+function delEvent(id) {
+  if(isViewingFriend()) return; // never mutate friend's data
+  events = events.filter(e => e.id !== id); renderCalendar(); renderEventList(); updateStats();
+}
+
+function updateStats() {
+  const today = new Date();
+  const src = activeEvents();
+  document.getElementById('statTotal').textContent = src.length;
+  document.getElementById('statThisMonth').textContent = src.filter(e => e.date && e.date.m===today.getMonth()+1 && e.date.y===today.getFullYear()).length;
+  const upcoming = src.filter(e => {
+    if(!e.date) return false;
+    const d = new Date(e.date.y, e.date.m-1, e.date.d);
+    return d >= today;
+  }).length;
+  document.getElementById('statUpcoming').textContent = upcoming;
+}
+
+
+document.getElementById('prevBtn').onclick = () => {curMonth--;if(curMonth<0){curMonth=11;curYear--;}selDate=null;renderCalendar();renderEventList();};
+document.getElementById('nextBtn').onclick = () => {curMonth++;if(curMonth>11){curMonth=0;curYear++;}selDate=null;renderCalendar();renderEventList();};
+
+/* ══ COURSE COLOR PICKER ══ */
+function buildColorPicker() {
+  const el = document.getElementById('colorPicker');
+  el.innerHTML = PALETTE.map((c,i) =>
+    `<div class="color-swatch${i===0?' active':''}" style="background:${c}" onclick="pickColor('${c}',this)" title="${c}"></div>`
+  ).join('');
+}
+function pickColor(c, el) {
+  selectedColor = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ══ COURSE MANAGEMENT ══ */
+function parseDayTH(str) {
+  const map = {'จันทร์':1,'อังคาร':2,'พุธ':3,'พฤหัส':4,'พฤหัสบดี':4,'ศุกร์':5,'เสาร์':6,'อาทิตย์':0,'อา':0,'จ':1,'อ':2,'พ':3,'พฤ':4,'ศ':5,'ส':6};
+  for(const k of Object.keys(map).sort((a,b) => b.length-a.length)) if(str.includes(k)) return map[k];
+  return null;
+}
+function parseTimeRange(str) {
+  const r = str.match(/(\d{1,2})[:.ː](\d{2})\s*[-–]\s*(\d{1,2})[:.ː](\d{2})/);
+  if(r) return {start: r[1].padStart(2,'0')+':'+r[2], end: r[3].padStart(2,'0')+':'+r[4]};
+  return null;
+}
+function norm(t) {const p=t.match(/^(\d{1,2}):?(\d{2})?$/);return p?p[1].padStart(2,'0')+':'+(p[2]||'00'):t;}
+
+function addCourse() {
+  const code  = document.getElementById('ci-code').value.trim();
+  const day   = +document.getElementById('ci-day').value;
+  const start = document.getElementById('ci-start').value.trim();
+  const end   = document.getElementById('ci-end').value.trim();
+  const room  = document.getElementById('ci-room').value.trim();
+  if(!code || !start || !end){alert('กรุณากรอกรหัสวิชาและเวลา');return;}
+  courses.push({id: Date.now(), code, day, start: norm(start), end: norm(end), room, color: selectedColor, name: ''});
+  renderCourseList(); renderTimetable();
+  ['ci-code','ci-start','ci-end','ci-room'].forEach(id => document.getElementById(id).value = '');
+}
+
+function parseBulk() {
+  const raw = document.getElementById('bulkInput').value.trim();
+  if(!raw) return;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line => {
+    const day = parseDayTH(line); if(day===null) return;
+    const timeR = parseTimeRange(line); if(!timeR) return;
+    const codeM = line.match(/([A-Z]{2,}[\d\-]+)/i);
+    const roomM = line.match(/([A-Z]{2}\d{3,}|\d{4,}|ST\d+|AD\d+|ป\S+)/i);
+    const code = codeM ? codeM[1] : 'วิชาใหม่';
+    const room = roomM ? roomM[roomM.length-1] : '';
+    courses.push({id: Date.now()+added, code, day, start: timeR.start, end: timeR.end, room, color: PALETTE[courses.length % PALETTE.length]});
+    added++;
+  });
+  renderCourseList(); renderTimetable();
+  document.getElementById('bulkInput').value = '';
+  const st = document.getElementById('bulkStatus');
+  st.className = 'status-bar status-ok';
+  st.textContent = `✓ เพิ่ม ${added} วิชาแล้ว`;
+  setTimeout(() => { st.textContent = ''; st.className = 'status-bar'; }, 3000);
+}
+
+function delCourse(id) { courses = courses.filter(c => c.id !== id); renderCourseList(); renderTimetable(); }
+function clearAllCourses() { if(confirm('ล้างตารางเรียนทั้งหมด?')){ courses=[]; renderCourseList(); renderTimetable(); } }
+
+function renderCourseList() {
+  const el = document.getElementById('courseList');
+  const stats = document.getElementById('weekStats');
+  if(!courses.length){
+    el.innerHTML = '<div class="empty-state" style="padding:10px"><i class="ic" data-icon="books"></i>ยังไม่มีวิชา</div>';
+    stats.textContent = '';
+    return;
+  }
+  el.innerHTML = courses.map(c => `<div class="course-chip">
+    <div class="chip-accent" style="background:${c.color}"></div>
+    <div class="chip-info">
+      <div class="chip-code">${c.code}</div>
+      <div class="chip-meta">${DAY_FULL[c.day]} ${c.start}–${c.end}${c.room?' · '+c.room:''}</div>
+    </div>
+    <button class="chip-del" onclick="delCourse(${c.id})"><i class="ic" data-icon="x"></i></button>
+  </div>`).join('');
+
+  // compute hours per week
+  const totalMin = courses.reduce((sum,c) => {
+    const [sh,sm] = c.start.split(':').map(Number);
+    const [eh,em] = c.end.split(':').map(Number);
+    return sum + (eh*60+em - sh*60-sm);
+  }, 0);
+  stats.textContent = `${courses.length} วิชา · ${(totalMin/60).toFixed(1)} ชม./สัปดาห์`;
+}
+
+function renderTimetable() {
+  const tt = document.getElementById('timetable');
+  if(!courses.length){
+    tt.innerHTML = '<tr><td style="padding:30px;text-align:center;color:var(--text3);font-size:13px">ยังไม่มีวิชาในตาราง — กดเพิ่มวิชาทางด้านซ้าย</td></tr>';
+    return;
+  }
+  const toMin = t => {const[h,m]=t.split(':').map(Number);return h*60+m;};
+  const allMins = courses.flatMap(c => [toMin(c.start), toMin(c.end)]);
+  let minHour = Math.floor(Math.min(...allMins)/60);
+  let maxHour = Math.ceil(Math.max(...allMins)/60);
+  minHour = Math.min(minHour, 7); maxHour = Math.max(maxHour, 19);
+  const hours = []; for(let h=minHour; h<maxHour; h++) hours.push(h);
+  const days = [1,2,3,4,5,6,0].filter(d => courses.some(c => c.day===d));
+  if(!days.length) return;
+
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const todayDow = now.getDay();
+  const nowCol = (nowMin - minHour*60) / 60;
+
+  let html = `<colgroup><col class="tt-time-col"/>${hours.map(()=>'<col/>').join('')}</colgroup>`;
+  html += `<tr><th></th>${hours.map(h=>`<th>${h}:00</th>`).join('')}</tr>`;
+
+  days.forEach(dayIdx => {
+    html += `<tr><td class="time-label">${DAY_FULL[dayIdx].slice(0,3)}<br><small>${DAY_SHORT[dayIdx]}</small></td>`;
+    const row = hours.map(() => ({span:1, content:'', skip:false}));
+    const dayCourses = courses.filter(c => c.day===dayIdx);
+
+    dayCourses.forEach(c => {
+      const s = toMin(c.start), e = toMin(c.end);
+      const colStart = Math.round((s - minHour*60)/60);
+      const colSpan  = Math.max(1, Math.round((e-s)/60));
+      for(let i=colStart; i<colStart+colSpan && i<row.length; i++) {
+        if(i===colStart) {
+          const durationH = ((e-s)/60).toFixed(1);
+          row[i].content = `<div class="tt-block" style="background:${c.color}" onclick="showCourseModal(${c.id})" title="${c.code} ${c.start}–${c.end}">
+            <div class="tb-code">${c.code}</div>
+            ${c.name ? `<div class="tb-name">${c.name}</div>` : ''}
+            ${c.room ? `<div class="tb-room"><i class="ic" data-icon="door" style="font-size:9px"></i>${c.room}</div>` : ''}
+            <div class="tb-time">${c.start}–${c.end}</div>
+          </div>`;
+          row[i].span = colSpan;
+        } else row[i].skip = true;
+      }
+    });
+
+    hours.forEach((_,i) => {
+      if(row[i].skip) return;
+      // add "now" indicator
+      let nowHTML = '';
+      if(dayIdx === todayDow && Math.abs(i - nowCol) < 0.5) {
+        const pct = ((nowMin - (minHour+i)*60) / 60) * 100;
+        nowHTML = `<div class="tt-now-line" style="top:${Math.min(100,Math.max(0,pct))}%"><div class="tt-now-dot"></div></div>`;
+      }
+      html += `<td class="day-col" colspan="${row[i].span}">${nowHTML}${row[i].content}</td>`;
+    });
+    html += '</tr>';
+  });
+  tt.innerHTML = html;
+}
+
+/* course modal */
+function showCourseModal(id) {
+  const c = courses.find(x => x.id === id); if(!c) return;
+  modalCourseId = id;
+  const modal = document.getElementById('courseModal');
+  document.getElementById('modalTitle').innerHTML = `<div style="width:12px;height:12px;border-radius:3px;background:${c.color};flex-shrink:0"></div>${c.code}`;
+  document.getElementById('modalBody').innerHTML = `
+    <strong>วัน:</strong> ${DAY_FULL[c.day]}<br>
+    <strong>เวลา:</strong> ${c.start} – ${c.end}<br>
+    ${c.room ? `<strong>ห้อง:</strong> ${c.room}<br>` : ''}
+    <strong>สี:</strong> <span style="font-family:monospace">${c.color}</span>
+  `;
+  document.getElementById('modalDelBtn').onclick = () => { delCourse(id); closeModal(); };
+  modal.classList.remove('hidden');
+}
+function closeModal() { document.getElementById('courseModal').classList.add('hidden'); }
+document.getElementById('courseModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+/* ══ EXPORT ══ */
+function exportSchedule() {
+  if(!courses.length){alert('ไม่มีวิชาในตาราง');return;}
+  const lines = ['รหัสวิชา,วัน,เวลาเริ่ม,เวลาสิ้นสุด,ห้อง'];
+  courses.forEach(c => lines.push(`${c.code},${DAY_FULL[c.day]},${c.start},${c.end},${c.room}`));
+  const blob = new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ตารางเรียน.csv';
+  a.click();
+}
+
+/* ══ KEYBOARD SHORTCUT ══ */
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter') doParse();
+});
+
+/* ══ FIREBASE AUTH & FIRESTORE ══ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDEoJ1IC4o3EGTt8PWddYEhoHuSHP5-Ldw",
+  authDomain: "smart-calendar-e359f.firebaseapp.com",
+  projectId: "smart-calendar-e359f",
+  storageBucket: "smart-calendar-e359f.firebasestorage.app",
+  messagingSenderId: "807601136707",
+  appId: "1:807601136707:web:99171af2eab0cf6ea6a0f6",
+  measurementId: "G-9PPEC49SN3"
+};
+
+const fbApp  = initializeApp(firebaseConfig);
+const auth   = getAuth(fbApp);
+const db     = getFirestore(fbApp);
+
+let currentUser = null;
+let unsubSnapshot = null;
+
+/* ── share code ── */
+function genShareCode(uid) {
+  let h = 0;
+  for(const c of uid) h = ((h<<5)-h) + c.charCodeAt(0)|0;
+  return Math.abs(h).toString(36).toUpperCase().padStart(6,'0').slice(0,6);
+}
+
+function setAuthMsg(msg,type='err'){
+  const el=document.getElementById('authMsg');
+  el.className='auth-msg '+type; el.textContent=msg;
+}
+
+/* ── Google Sign-In (only auth method) ── */
+async function doGoogleLogin(){
+  try{
+    const provider=new GoogleAuthProvider();
+    await signInWithPopup(auth,provider);
+  }catch(e){ setAuthMsg('Google login ผิดพลาด: '+e.message); }
+}
+window.doGoogleLogin=doGoogleLogin;
+
+/* ── Logout ── */
+async function doLogout(){
+  if(!confirm('ออกจากระบบ?'))return;
+  if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+  if(!currentUser?.isGuest) await signOut(auth);
+  currentUser=null; events=[]; courses=[];
+  renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('landing').classList.remove('hidden');
+  document.getElementById('userDropdown').style.display='none';
+  document.getElementById('userMenu').classList.remove('open');
+}
+window.doLogout=doLogout;
+
+/* ── Auth State Observer ── */
+onAuthStateChanged(auth, async user=>{
+  if(user){
+    const shareCode=genShareCode(user.uid);
+    currentUser={uid:user.uid,displayName:user.displayName||user.email,email:user.email,isGuest:false,shareCode,shareEnabled:false,shareCourses:false};
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    updateUserBar();
+    await loadUserProfile();
+    subscribeUserData();
+  }
+});
+
+/* ── User Bar ── */
+function updateUserBar(){
+  if(!currentUser)return;
+  document.getElementById('userDropdown').style.display='';
+  const colors=['#58a6ff','#39d353','#bc8cff','#d29922','#f85149'];
+  const idx=(currentUser.uid||'').charCodeAt(0)%colors.length;
+  document.getElementById('userAvatar').style.background=colors[idx];
+  document.getElementById('userAvatar').textContent=(currentUser.displayName||'?')[0].toUpperCase();
+  document.getElementById('userNameDisplay').textContent=currentUser.displayName||'ผู้ใช้';
+  document.getElementById('userRoleDisplay').textContent=currentUser.isGuest?'ผู้เยี่ยมชม':currentUser.email;
+}
+
+function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('open');}
+window.toggleUserMenu=toggleUserMenu;
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('userDropdown');
+  if(dd&&!dd.contains(e.target))document.getElementById('userMenu').classList.remove('open');
+});
+
+/* ── Firestore: load profile (share settings) ── */
+async function loadUserProfile(){
+  try{
+    const snap=await getDoc(doc(db,'users',currentUser.uid,'profile','settings'));
+    if(snap.exists()){
+      const d=snap.data();
+      currentUser.shareEnabled=d.shareEnabled||false;
+      currentUser.shareCourses=d.shareCourses||false;
+    }
+  }catch(e){console.warn('loadProfile:',e);}
+}
+
+/* ── Firestore: real-time listener for user data ── */
+function subscribeUserData(){
+  if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+  unsubSnapshot=onSnapshot(doc(db,'users',currentUser.uid,'data','main'),snap=>{
+    if(snap.exists()){
+      const d=snap.data();
+      events=d.events||[]; courses=d.courses||[];
+    }else{
+      events=[]; courses=[];
+    }
+    renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();
+  });
+}
+
+/* ── Save to Firestore ── */
+async function saveUserData(){
+  if(!currentUser||currentUser.isGuest)return;
+  try{
+    await setDoc(doc(db,'users',currentUser.uid,'data','main'),{events,courses,updatedAt:Date.now()});
+    if(currentUser.shareEnabled) await pushSharedData();
+  }catch(e){console.warn('save:',e);}
+}
+setInterval(()=>{if(currentUser&&!currentUser.isGuest)saveUserData();},30000);
+
+/* ── Share ── */
+function openShareModal(){
+  document.getElementById('userMenu').classList.remove('open');
+  if(!currentUser||currentUser.isGuest){alert('กรุณาเข้าสู่ระบบก่อนแชร์');return;}
+  document.getElementById('shareCodeDisplay').textContent=currentUser.shareCode||'-';
+  document.getElementById('shareToggle').checked=currentUser.shareEnabled||false;
+  document.getElementById('shareCoursesToggle').checked=currentUser.shareCourses||false;
+  document.getElementById('shareModal').classList.remove('hidden');
+}
+window.openShareModal=openShareModal;
+function closeShareModal(){document.getElementById('shareModal').classList.add('hidden');}
+window.closeShareModal=closeShareModal;
+
+async function toggleShare(){
+  currentUser.shareEnabled=document.getElementById('shareToggle').checked;
+  currentUser.shareCourses=document.getElementById('shareCoursesToggle').checked;
+  try{
+    await setDoc(doc(db,'users',currentUser.uid,'profile','settings'),{shareEnabled:currentUser.shareEnabled,shareCourses:currentUser.shareCourses});
+    if(currentUser.shareEnabled) await pushSharedData();
+    else await setDoc(doc(db,'shared',currentUser.shareCode),{active:false});
+  }catch(e){console.warn(e);}
+}
+window.toggleShare=toggleShare;
+
+async function pushSharedData(){
+  if(!currentUser?.shareCode)return;
+  await setDoc(doc(db,'shared',currentUser.shareCode),{
+    displayName:currentUser.displayName,uid:currentUser.uid,
+    events,courses:currentUser.shareCourses?courses:[],
+    active:true,updatedAt:Date.now()
+  });
+}
+
+async function copyShareCode(){
+  const code=currentUser?.shareCode||'';
+  try{await navigator.clipboard.writeText(code);}catch(e){}
+  const btn=document.querySelector('#shareModal .btn-sm');
+  const old=btn.innerHTML;
+  btn.innerHTML='<i class="ic" data-icon="check"></i> คัดลอกแล้ว!';
+  renderIcons(btn);
+  setTimeout(()=>{btn.innerHTML=old;renderIcons(btn);},2000);
+}
+window.copyShareCode=copyShareCode;
+
+/* ── Friends ── */
+function openFriendsModal(){
+  document.getElementById('userMenu').classList.remove('open');
+  if(!currentUser||currentUser.isGuest){alert('กรุณาเข้าสู่ระบบก่อนใช้งานเพื่อน');return;}
+  document.getElementById('friendCodeInput').value='';
+  document.getElementById('friendAddStatus').textContent='';
+  document.getElementById('friendsModal').classList.remove('hidden');
+  loadFriendsList();
+}
+window.openFriendsModal=openFriendsModal;
+function closeFriendsModal(){document.getElementById('friendsModal').classList.add('hidden');}
+window.closeFriendsModal=closeFriendsModal;
+
+async function addFriend(){
+  const input=document.getElementById('friendCodeInput');
+  const status=document.getElementById('friendAddStatus');
+  const code=input.value.trim().toUpperCase();
+  if(!code){status.style.color='var(--red)';status.textContent='กรุณาใส่รหัสแชร์';return;}
+  if(code===currentUser.shareCode){status.style.color='var(--red)';status.textContent='นี่คือรหัสแชร์ของคุณเอง';return;}
+  status.style.color='var(--text3)';status.textContent='กำลังตรวจสอบ...';
+  try{
+    const snap=await getDoc(doc(db,'shared',code));
+    if(!snap.exists()||!snap.data().active){
+      status.style.color='var(--red)';
+      status.textContent='ไม่พบรหัสแชร์นี้ หรือเจ้าของยังไม่ได้เปิดการแชร์';
+      return;
+    }
+    const data=snap.data();
+    if(friendsList.some(f=>f.shareCode===code)){
+      status.style.color='var(--amber)';status.textContent=`"${data.displayName}" อยู่ในรายชื่อเพื่อนแล้ว`;
+      return;
+    }
+    await setDoc(doc(db,'users',currentUser.uid,'friends',data.uid),{
+      shareCode:code, displayName:data.displayName, addedAt:Date.now()
+    });
+    status.style.color='var(--teal)';status.textContent=`✓ แอด "${data.displayName}" เรียบร้อย`;
+    input.value='';
+    await loadFriendsList();
+  }catch(e){status.style.color='var(--red)';status.textContent='เกิดข้อผิดพลาด: '+e.message;}
+}
+window.addFriend=addFriend;
+
+async function loadFriendsList(){
+  const listEl=document.getElementById('friendsListEl');
+  const countEl=document.getElementById('friendCount');
+  try{
+    const snaps=await getDocs(collection(db,'users',currentUser.uid,'friends'));
+    friendsList=snaps.docs.map(d=>({uid:d.id,...d.data()}));
+  }catch(e){console.warn('loadFriendsList:',e);friendsList=[];}
+  countEl.textContent=friendsList.length;
+  if(!friendsList.length){
+    listEl.innerHTML='<div class="empty-state" style="padding:16px"><i class="ic" data-icon="users"></i>ยังไม่มีเพื่อน<br><small>ใส่รหัสแชร์ของเพื่อนด้านบนเพื่อแอด</small></div>';
+    renderIcons(listEl);
+    return;
+  }
+  const colors=['#58a6ff','#39d353','#bc8cff','#d29922','#f85149'];
+  listEl.innerHTML=friendsList.map(f=>{
+    const idx=(f.uid||'').charCodeAt(0)%colors.length;
+    const isViewing=viewState.active==='friend'&&viewState.friendUid===f.uid;
+    return `<div class="friend-row">
+      <div class="friend-avatar" style="background:${colors[idx]}">${(f.displayName||'?')[0].toUpperCase()}</div>
+      <div class="friend-info">
+        <div class="friend-name">${f.displayName||'ไม่ทราบชื่อ'}</div>
+        <div class="friend-meta">รหัส ${f.shareCode}</div>
+      </div>
+      <button class="friend-view-btn${isViewing?' is-viewing':''}" onclick="viewFriendCalendar('${f.uid}')">${isViewing?'กำลังดู':'ดูปฏิทิน'}</button>
+      <button class="friend-remove-btn" onclick="removeFriend('${f.uid}')" title="ลบเพื่อน"><i class="ic" data-icon="trash"></i></button>
+    </div>`;
+  }).join('');
+  renderIcons(listEl);
+}
+
+async function viewFriendCalendar(uid){
+  const friend=friendsList.find(f=>f.uid===uid);
+  if(!friend)return;
+  try{
+    const snap=await getDoc(doc(db,'shared',friend.shareCode));
+    if(!snap.exists()||!snap.data().active){
+      alert(`"${friend.displayName}" ยังไม่ได้เปิดการแชร์ปฏิทินอยู่ในขณะนี้`);
+      return;
+    }
+    const data=snap.data();
+    viewState={active:'friend',friendUid:uid,friendName:data.displayName||friend.displayName,friendEvents:data.events||[],friendCourses:data.courses||[]};
+    document.getElementById('viewingFriendName').textContent=viewState.friendName;
+    document.getElementById('viewingBanner').classList.add('active');
+    closeFriendsModal();
+    renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();
+  }catch(e){alert('โหลดปฏิทินเพื่อนไม่สำเร็จ: '+e.message);}
+}
+window.viewFriendCalendar=viewFriendCalendar;
+
+function exitFriendView(){
+  viewState={active:'me',friendUid:null,friendName:'',friendEvents:[],friendCourses:[]};
+  document.getElementById('viewingBanner').classList.remove('active');
+  renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();
+}
+window.exitFriendView=exitFriendView;
+
+async function removeFriend(uid){
+  const friend=friendsList.find(f=>f.uid===uid);
+  if(!friend)return;
+  if(!confirm(`ลบ "${friend.displayName}" ออกจากรายชื่อเพื่อน?`))return;
+  try{
+    await deleteDoc(doc(db,'users',currentUser.uid,'friends',uid));
+    if(viewState.active==='friend'&&viewState.friendUid===uid) exitFriendView();
+    await loadFriendsList();
+  }catch(e){alert('ลบเพื่อนไม่สำเร็จ: '+e.message);}
+}
+window.removeFriend=removeFriend;
+
+/* ══ INIT ══ */
+// Expose all inline-handler functions to window (required for type="module")
+Object.assign(window,{
+  switchTab,updateCharCount,doParse,addEvent,renderParsed,
+  selectDate,prevMonth,nextMonth,goToday,setCalView,delEvent,
+  pickColor,addCourse,parseBulk,delCourse,clearAllCourses,
+  showCourseModal,closeModal,exportSchedule
+});
+
+// Patch mutating functions to auto-save to Firestore
+const _delEvent=delEvent;
+window.delEvent=id=>{_delEvent(id);saveUserData();};
+const _addCourse=addCourse;
+window.addCourse=()=>{_addCourse();saveUserData();};
+const _delCourse=delCourse;
+window.delCourse=id=>{_delCourse(id);saveUserData();};
+const _clearAllCourses=clearAllCourses;
+window.clearAllCourses=()=>{_clearAllCourses();saveUserData();};
+
+buildColorPicker();
+renderCalendar(); renderEventList(); updateStats();
+
+/* ══ DEMO DATA ══ */
+const demoCourses = [
+  {id:1, code:'GEN67-141', day:1, start:'08:00', end:'10:00', room:'AD1302', color:PALETTE[0]},
+  {id:2, code:'CVE67-332', day:1, start:'13:00', end:'14:00', room:'ปฏิบัติ', color:PALETTE[1]},
+  {id:3, code:'CVE67-312', day:1, start:'17:00', end:'19:00', room:'03202',   color:PALETTE[2]},
+  {id:4, code:'CVE67-311', day:2, start:'12:00', end:'14:00', room:'AD1110',  color:PALETTE[3]},
+  {id:5, code:'GEN67-161', day:2, start:'16:00', end:'18:00', room:'AD1311',  color:PALETTE[4]},
+  {id:6, code:'CVE67-341', day:4, start:'12:00', end:'14:00', room:'07211',   color:PALETTE[5]},
+  {id:7, code:'CVE67-371', day:5, start:'07:00', end:'08:00', room:'03211',   color:PALETTE[6]},
+  {id:8, code:'CVE67-312', day:5, start:'13:00', end:'14:00', room:'07211',   color:PALETTE[2]},
+  {id:9, code:'CVE67-331', day:5, start:'17:00', end:'19:00', room:'ST201',   color:PALETTE[7]},
+  {id:10,code:'CVE67-351', day:6, start:'17:00', end:'19:00', room:'ปฏิบัติ',color:PALETTE[8]},
+];
+courses.push(...demoCourses); renderCourseList(); renderTimetable();
+</script>
+</body>
+</html>
