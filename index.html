@@ -1178,6 +1178,21 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
 .cdlg-btn.confirm:hover{background:#4090e0}
 .cdlg-btn.danger{background:rgba(248,81,73,.12);border-color:rgba(248,81,73,.3);color:var(--red)}
 .cdlg-btn.danger:hover{background:var(--red);color:#fff}
+
+/* ── SAVE STATUS TOAST ── */
+#scToastWrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9500;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.sc-toast{display:flex;align-items:center;gap:9px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:13px;font-weight:500;color:var(--text1);opacity:0;transform:translateY(10px) scale(.96);transition:opacity .2s ease,transform .2s ease;max-width:90vw;white-space:nowrap}
+.sc-toast.show{opacity:1;transform:translateY(0) scale(1)}
+.sc-toast .st-icon{flex-shrink:0;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sc-toast.saving{border-color:var(--border2)}
+.sc-toast.saving .st-icon{color:var(--text2)}
+.sc-toast.saving .st-spinner{width:13px;height:13px;border-radius:50%;border:2px solid var(--border2);border-top-color:var(--blue);animation:scspin .7s linear infinite}
+@keyframes scspin{to{transform:rotate(360deg)}}
+.sc-toast.ok{border-color:rgba(57,211,83,.3)}
+.sc-toast.ok .st-icon{color:var(--teal)}
+.sc-toast.err{border-color:rgba(248,81,73,.3)}
+.sc-toast.err .st-icon{color:var(--red)}
+.sc-toast .st-retry{pointer-events:all;margin-left:4px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;text-decoration:underline}
 </style>
 <div id="customDialog">
   <div class="cdlg-box">
@@ -1188,6 +1203,7 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
     <div class="cdlg-actions" id="cdlgActions"></div>
   </div>
 </div>
+<div id="scToastWrap"></div>
 
 <!-- ══════════════════════════════════
      MAIN SCRIPT
@@ -1256,6 +1272,43 @@ function scPrompt(msg,defaultVal='',{title='กรอกข้อมูล'}={})
     },{once:true});
   });
 }
+
+/* ── SAVE STATUS TOAST ──
+   ใช้แจ้งสถานะ "จริง" ของการบันทึกขึ้น Firestore: กำลังบันทึก → สำเร็จ / ไม่สำเร็จ
+   ต่างจาก scConfirm ที่ถามก่อนทำ — ตัวนี้รายงานผลหลังทำเสร็จแล้ว */
+let _scToastTimer=null;
+let _scToastEl=null;
+function _scToastRender(state,msg,onRetry){
+  const wrap=document.getElementById('scToastWrap');
+  if(!_scToastEl){_scToastEl=document.createElement('div');wrap.appendChild(_scToastEl);}
+  const el=_scToastEl;
+  el.className='sc-toast '+state;
+  let iconHtml='';
+  if(state==='saving')iconHtml='<span class="st-spinner"></span>';
+  else if(state==='ok')iconHtml='<span class="st-icon">✓</span>';
+  else if(state==='err')iconHtml='<span class="st-icon">✕</span>';
+  el.innerHTML=iconHtml+'<span>'+msg+'</span>'+(onRetry?'<span class="st-retry" id="scToastRetryBtn">ลองอีกครั้ง</span>':'');
+  requestAnimationFrame(()=>el.classList.add('show'));
+  if(onRetry){
+    const btn=document.getElementById('scToastRetryBtn');
+    if(btn)btn.onclick=onRetry;
+  }
+  return el;
+}
+function scToastSaving(msg='กำลังบันทึกข้อมูล...'){
+  if(_scToastTimer){clearTimeout(_scToastTimer);_scToastTimer=null;}
+  _scToastRender('saving',msg);
+}
+function scToastOk(msg='บันทึกขึ้นระบบสำเร็จแล้ว',{autoHideMs=2200}={}){
+  _scToastRender('ok',msg);
+  if(_scToastTimer)clearTimeout(_scToastTimer);
+  _scToastTimer=setTimeout(()=>{if(_scToastEl)_scToastEl.classList.remove('show');},autoHideMs);
+}
+function scToastErr(msg='บันทึกไม่สำเร็จ ข้อมูลอาจยังไม่ขึ้นระบบ',{onRetry=null}={}){
+  _scToastRender('err',msg,onRetry);
+  if(_scToastTimer){clearTimeout(_scToastTimer);_scToastTimer=null;} // ไม่ auto-hide ตอน error เพื่อให้สังเกตเห็นแน่ชัด ต้องกดทิ้งเอง/แก้ไขใหม่
+}
+window.scToastSaving=scToastSaving;window.scToastOk=scToastOk;window.scToastErr=scToastErr;
 
 /* ── ICON SYSTEM ── */
 const ICONS = {
@@ -1999,12 +2052,17 @@ function subscribeUserData(){
 async function _doSaveUserData(){
   if(!currentUser||currentUser.isGuest)return;
   _saveInFlight=true;
+  scToastSaving();
   const ts=Date.now();
   try{
     await setDoc(doc(db,'users',currentUser.uid,'data','main'),{events,courses,updatedAt:ts});
     _lastLocalDataUpdatedAt=ts; // กันไม่ให้ snapshot ของการ save นี้เอง (สะท้อนกลับมา) ถูกมองว่าเก่ากว่า
     if(currentUser.shareEnabled)await pushSharedData();
-  }catch(e){console.warn('save:',e);}
+    scToastOk(); // ยืนยันว่าบันทึกขึ้น Firestore สำเร็จจริง ไม่ใช่แค่ local
+  }catch(e){
+    console.warn('save:',e);
+    scToastErr('บันทึกไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',{onRetry:()=>{_doSaveUserData();}});
+  }
   finally{
     _saveInFlight=false;
     if(_saveQueued){_saveQueued=false;_doSaveUserData();} // มีการแก้ไขเพิ่มเข้ามาตอนที่กำลัง save อยู่ → save อีกรอบทันที
