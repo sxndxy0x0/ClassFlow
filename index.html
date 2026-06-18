@@ -183,12 +183,12 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
 .chip-del:hover{color:var(--red);background:rgba(248,81,73,.1)}
 
 .tt-scroll{overflow-x:auto;padding:16px;flex:1}
-.tt{border-collapse:collapse;min-width:800px;width:100%}
+.tt{border-collapse:collapse;width:100%;table-layout:fixed}
 .tt-time-col{width:52px}
-.tt th{padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);border:1px solid var(--border);background:var(--bg2);white-space:nowrap;letter-spacing:.03em}
+.tt th{padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);border:1px solid var(--border);background:var(--bg2);overflow:hidden;letter-spacing:.03em}
 .tt td{border:1px solid var(--border);vertical-align:top;height:58px;position:relative}
 .tt td.time-label{text-align:center;font-size:10px;font-weight:600;color:var(--text3);background:var(--bg2);padding:0 6px;white-space:nowrap;font-family:'IBM Plex Mono',monospace;vertical-align:middle}
-.tt td.day-col{background:var(--bg);min-width:80px}
+.tt td.day-col{background:var(--bg);overflow:hidden}
 .tt td.day-col:hover{background:var(--bg3)}
 .tt-now-line{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:1;pointer-events:none;box-shadow:0 0 4px rgba(248,81,73,.9),0 0 0 1px rgba(13,17,23,.6)}
 .tt-now-dot{position:absolute;left:-4px;width:8px;height:8px;background:var(--red);border-radius:50%;top:-3px;box-shadow:0 0 0 2px var(--bg)}
@@ -543,10 +543,43 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
   .dropdown{order:2;margin-left:auto}
   .tabs{order:3;width:100%;margin-left:0;margin-top:4px}
   .tab{flex:1;justify-content:center;padding:9px 6px;font-size:11px;gap:4px}
+
+  /* week main no overflow on mobile */
+  .week-main{overflow-x:hidden}
+
+  /* timetable */
+  .tt-scroll{padding:8px 0}
+  .tt th,.tt td{font-size:9px;padding:3px 4px}
+  .tt th:first-child,.tt td:first-child{padding:3px 5px;font-size:9px}
+  .tt-block{font-size:8px;padding:3px 4px;line-height:1.2}
+  .tt-block .tb-code{font-size:8px}
+  .tt-block .tb-room,.tt-block .tb-group{font-size:7px}
+
+  /* week header */
+  .week-header{flex-wrap:wrap;gap:6px;padding:12px 12px 8px}
+  .week-title{font-size:14px}
+  .week-subtitle{font-size:11px}
+
+  /* list view */
+  #courseListView{overflow-x:auto}
+  .course-list-table{min-width:480px}
+  .course-list-table th,.course-list-table td{padding:7px 8px;font-size:11px}
+  .clt-day-row td{font-size:10px;padding:4px 8px}
+
+  /* list view header */
+  #pane-weekly .week-main > div:last-child > div:first-child{flex-wrap:wrap;gap:6px}
 }
 @media(max-width:420px){
   .tab-label-full{display:none}
   .tab-label-short{display:inline}
+
+  /* timetable แคบมาก */
+  .tt th,.tt td{font-size:8px;padding:2px 3px}
+  .tt th:first-child,.tt td:first-child{padding:2px 3px;font-size:8px}
+  .tt-block{font-size:7px;padding:2px 3px}
+
+  /* ซ่อนคอลัมน์ห้องบนตารางรายการ มือถือเล็กมาก */
+  .course-list-table .clt-hide-xs{display:none}
 }
 </style>
 </head>
@@ -814,7 +847,7 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
             <div class="status-bar" id="bulkStatus"></div>
           </div>
         </div>
-        <div class="week-main">
+        <div class="week-main" style="min-width:0">
           <div class="week-header">
             <div><div class="week-title">ตารางเรียนรายสัปดาห์</div></div>
             <span class="week-subtitle" id="weekStats"></span>
@@ -1555,7 +1588,7 @@ function renderCourseListView(){
   }
   const mode=window._sortMode||'day';
   const DAY_ORDER=[1,2,3,4,5,6,0];
-  let html='<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th>ห้อง</th><th>กลุ่ม</th></tr></thead><tbody>';
+  let html='<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th class="clt-hide-xs">ห้อง</th><th>กลุ่ม</th></tr></thead><tbody>';
   if(mode==='day'){
     DAY_ORDER.forEach(d=>{
       const dayCourses=src.filter(c=>c.day===d).sort((a,b)=>a.start.localeCompare(b.start));
@@ -1566,7 +1599,7 @@ function renderCourseListView(){
           <td><span class="clt-color-dot" style="background:${c.color}"></span><span class="clt-code">${c.code}</span>${c.name?`<br><span style="font-size:11px;color:var(--text2);margin-left:14px">${c.name}</span>`:''}
           </td>
           <td class="clt-time">${c.start}–${c.end}</td>
-          <td class="clt-room">${c.room||'–'}</td>
+          <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
           <td class="clt-group">${c.group||'–'}</td>
         </tr>`;
       });
@@ -1582,7 +1615,7 @@ function renderCourseListView(){
       html+=`<tr>
         <td style="padding-left:20px;color:var(--text2);font-size:12px">${DAY_FULL[c.day]}</td>
         <td class="clt-time">${c.start}–${c.end}</td>
-        <td class="clt-room">${c.room||'–'}</td>
+        <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
         <td class="clt-group">${c.group||'–'}</td>
       </tr>`;
     });
