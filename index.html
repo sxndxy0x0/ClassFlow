@@ -563,10 +563,12 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
   .week-subtitle{margin-left:0;font-size:10px}
 
   /* list view */
-  #courseListView{overflow-x:auto}
-  .course-list-table{min-width:480px}
-  .course-list-table th,.course-list-table td{padding:7px 8px;font-size:11px}
+  #courseListView{overflow-x:hidden}
+  .course-list-table{min-width:0;width:100%}
+  .course-list-table th,.course-list-table td{padding:6px 8px;font-size:11px}
   .clt-day-row td{font-size:10px;padding:4px 8px}
+  .clt-hide-xs{display:none}
+  .clt-show-xs{display:inline !important}
 
   /* list view header */
   #pane-weekly .week-main > div:last-child > div:first-child{flex-wrap:wrap;gap:6px}
@@ -1590,7 +1592,7 @@ function renderCourseListView(){
   }
   const mode=window._sortMode||'day';
   const DAY_ORDER=[1,2,3,4,5,6,0];
-  let html='<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th class="clt-hide-xs">ห้อง</th><th>กลุ่ม</th></tr></thead><tbody>';
+  let html='<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th class="clt-hide-xs">ห้อง</th><th class="clt-hide-xs">กลุ่ม</th></tr></thead><tbody>';
   if(mode==='day'){
     DAY_ORDER.forEach(d=>{
       const dayCourses=src.filter(c=>c.day===d).sort((a,b)=>a.start.localeCompare(b.start));
@@ -1599,10 +1601,11 @@ function renderCourseListView(){
       dayCourses.forEach(c=>{
         html+=`<tr>
           <td><span class="clt-color-dot" style="background:${c.color}"></span><span class="clt-code">${c.code}</span>${c.name?`<br><span style="font-size:11px;color:var(--text2);margin-left:14px">${c.name}</span>`:''}
+          <span class="clt-hide-xs" style="display:none"></span><span class="clt-show-xs" style="font-size:10px;color:var(--text3);display:none;margin-left:14px">${[c.room,c.group?'กลุ่ม'+c.group:''].filter(Boolean).join(' · ')}</span>
           </td>
           <td class="clt-time">${c.start}–${c.end}</td>
           <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
-          <td class="clt-group">${c.group||'–'}</td>
+          <td class="clt-group clt-hide-xs">${c.group||'–'}</td>
         </tr>`;
       });
     });
@@ -1615,10 +1618,10 @@ function renderCourseListView(){
         lastCode=c.code;
       }
       html+=`<tr>
-        <td style="padding-left:20px;color:var(--text2);font-size:12px">${DAY_FULL[c.day]}</td>
+        <td style="padding-left:20px;color:var(--text2);font-size:12px">${DAY_FULL[c.day]}<span class="clt-show-xs" style="display:none;font-size:10px;color:var(--text3)"> · ${c.room||''}</span></td>
         <td class="clt-time">${c.start}–${c.end}</td>
         <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
-        <td class="clt-group">${c.group||'–'}</td>
+        <td class="clt-group clt-hide-xs">${c.group||'–'}</td>
       </tr>`;
     });
   }
