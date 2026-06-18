@@ -1574,13 +1574,10 @@ function renderEventList(){
         <span class="ev-cat-chip cat-${ev.cat||'other'}">${CAT_LABELS[ev.cat]||'ทั่วไป'}</span>
       </div>
     </div>
-    ${ro?'':`<div style="display:flex;gap:4px;flex-shrink:0">
-      <button class="ev-del" onclick="showEventModal(${ev.id})" style="color:var(--blue)"><i class="ic" data-icon="pencil"></i></button>
-      <button class="ev-del" onclick="delEvent(${ev.id})"><i class="ic" data-icon="trash"></i></button>
-    </div>`}
+    ${ro?'':`<button class="ev-del" onclick="showEventModal(${ev.id})" style="color:var(--blue)"><i class="ic" data-icon="pencil"></i></button>`}
   </div>`).join('');
 }
-function delEvent(id){if(isViewingFriend())return;events=events.filter(e=>e.id!==id);renderCalendar();renderEventList();updateStats();saveUserData();}
+async function delEvent(id){if(isViewingFriend())return;if(!await scConfirm('ลบกิจกรรมนี้?',{title:'ยืนยันการลบ',danger:true}))return;events=events.filter(e=>Number(e.id)!==Number(id));renderCalendar();renderEventList();updateStats();saveUserData();}
 function updateStats(){
   const today=new Date();const src=activeEvents();
   document.getElementById('statTotal').textContent=src.length;
@@ -1661,20 +1658,22 @@ function renderCourseListView(){
   }
   const mode=window._sortMode||'day';
   const DAY_ORDER=[1,2,3,4,5,6,0];
-  let html='<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th class="clt-hide-xs">ห้อง</th><th class="clt-hide-xs">กลุ่ม</th></tr></thead><tbody>';
+  const ro=isViewingFriend();
+  let html=`<table class="course-list-table"><thead><tr><th>รหัสวิชา</th><th>เวลา</th><th class="clt-hide-xs">ห้อง</th><th class="clt-hide-xs">กลุ่ม</th>${ro?'':'<th style="width:36px"></th>'}</tr></thead><tbody>`;
   if(mode==='day'){
     DAY_ORDER.forEach(d=>{
       const dayCourses=src.filter(c=>c.day===d).sort((a,b)=>a.start.localeCompare(b.start));
       if(!dayCourses.length)return;
-      html+=`<tr class="clt-day-row"><td colspan="4">📅 ${DAY_FULL[d]}</td></tr>`;
+      html+=`<tr class="clt-day-row"><td colspan="${ro?4:5}">📅 ${DAY_FULL[d]}</td></tr>`;
       dayCourses.forEach(c=>{
         html+=`<tr>
           <td><span class="clt-color-dot" style="background:${c.color}"></span><span class="clt-code">${c.code}</span>${c.name?`<br><span style="font-size:11px;color:var(--text2);margin-left:14px">${c.name}</span>`:''}
-          <span class="clt-hide-xs" style="display:none"></span><span class="clt-show-xs" style="font-size:10px;color:var(--text3);display:none;margin-left:14px">${[c.room,c.group?'กลุ่ม'+c.group:''].filter(Boolean).join(' · ')}</span>
+          <span class="clt-show-xs" style="font-size:10px;color:var(--text3);display:none;margin-left:14px">${[c.room,c.group?'กลุ่ม'+c.group:''].filter(Boolean).join(' · ')}</span>
           </td>
           <td class="clt-time">${c.start}–${c.end}</td>
           <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
           <td class="clt-group clt-hide-xs">${c.group||'–'}</td>
+          ${ro?'':`<td style="text-align:center;padding:4px"><button onclick="showCourseModal(${c.id})" style="background:none;border:none;cursor:pointer;color:var(--blue);padding:4px;border-radius:4px" title="แก้ไข"><i class="ic" data-icon="pencil"></i></button></td>`}
         </tr>`;
       });
     });
@@ -1683,7 +1682,7 @@ function renderCourseListView(){
     let lastCode='';
     sorted.forEach(c=>{
       if(c.code!==lastCode){
-        html+=`<tr class="clt-day-row"><td colspan="4"><span class="clt-color-dot" style="background:${c.color}"></span>${c.code}${c.name?` — ${c.name}`:''}</td></tr>`;
+        html+=`<tr class="clt-day-row"><td colspan="${ro?4:5}"><span class="clt-color-dot" style="background:${c.color}"></span>${c.code}${c.name?` — ${c.name}`:''}</td></tr>`;
         lastCode=c.code;
       }
       html+=`<tr>
@@ -1691,6 +1690,7 @@ function renderCourseListView(){
         <td class="clt-time">${c.start}–${c.end}</td>
         <td class="clt-room clt-hide-xs">${c.room||'–'}</td>
         <td class="clt-group clt-hide-xs">${c.group||'–'}</td>
+        ${ro?'':`<td style="text-align:center;padding:4px"><button onclick="showCourseModal(${c.id})" style="background:none;border:none;cursor:pointer;color:var(--blue);padding:4px;border-radius:4px" title="แก้ไข"><i class="ic" data-icon="pencil"></i></button></td>`}
       </tr>`;
     });
   }
