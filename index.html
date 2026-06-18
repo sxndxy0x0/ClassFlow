@@ -2659,8 +2659,9 @@ async function saveSetting(key,value){
     localStorage.setItem('sc_settings',JSON.stringify(local));
   }catch(e){}
   applySetting(key,value);
-  // sync Firestore ถ้า login แล้ว
-  if(currentUser&&!currentUser.isGuest){
+  // sync Firestore ถ้า login แล้ว (ยกเว้น notif keys — บันทึกเฉพาะ browser นี้)
+  const LOCAL_ONLY=['notifEvents','notifMessages','notifPosts','notifSound'];
+  if(currentUser&&!currentUser.isGuest&&!LOCAL_ONLY.includes(key)){
     try{await setDoc(doc(db,'users',currentUser.uid,'profile','appSettings'),{[key]:value},{merge:true});}
     catch(e){console.warn('saveSetting:',e);}
   }
@@ -2795,20 +2796,24 @@ function loadLocalSettings(){
 
 async function loadSettings(){
   if(!currentUser)return;
+  // keys ที่ผูกกับ browser นั้นๆ เท่านั้น ไม่ sync จาก Firestore
+  const LOCAL_ONLY_KEYS=['notifEvents','notifMessages','notifPosts','notifSound'];
   try{
     const snap=await getDoc(doc(db,'users',currentUser.uid,'profile','appSettings'));
     if(snap.exists()){
       const d=snap.data();
-      // merge Firestore ทับ localStorage (Firestore เป็น source of truth)
+      // merge เฉพาะ key ที่ไม่ใช่ notif (notif ใช้ localStorage ของ browser นี้เท่านั้น)
+      LOCAL_ONLY_KEYS.forEach(k=>delete d[k]);
       Object.assign(appSettings,d);
-      // sync กลับ localStorage ด้วย
-      localStorage.setItem('sc_settings',JSON.stringify(appSettings));
+      // sync กลับ localStorage เฉพาะ non-notif keys
+      const local=JSON.parse(localStorage.getItem('sc_settings')||'{}');
+      Object.assign(local,d);
+      localStorage.setItem('sc_settings',JSON.stringify(local));
     }
     applySettingsToUI();
-    // apply หลังโหลด
+    // apply หลังโหลด — เปิด notifChecker เฉพาะถ้า browser นี้ให้สิทธิ์แล้ว และ localStorage เปิดไว้
     if(appSettings.notifEvents&&typeof Notification!=='undefined'&&Notification.permission==='granted')startEventNotifChecker();
     updateOnlineStatus(appSettings.privOnline);
-    // online heartbeat ทุก 2 นาที
     if(onlineInterval)clearInterval(onlineInterval);
     onlineInterval=setInterval(()=>{if(appSettings.privOnline)updateOnlineStatus(true);},120000);
     renderCalendar();
