@@ -1890,7 +1890,7 @@ async function doLogout(){
   if(feedUnsubscribe){feedUnsubscribe();feedUnsubscribe=null;}
   if(!currentUser?.isGuest)await signOut(auth);
   // reset state ทั้งหมด
-  currentUser=null;events=[];courses=[];friendsList=[];activeChatFriend=null;
+  currentUser=null;events=[];courses=[];friendsList=[];activeChatFriend=null;_lastLocalDataUpdatedAt=0;
   // reset UI แชท
   const chatWindow=document.getElementById('chatWindow');
   if(chatWindow)chatWindow.innerHTML='<div class="chat-empty-state"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:15px;font-weight:600;color:var(--text1);margin-bottom:6px">เลือกเพื่อนเพื่อเริ่มแชท</div></div>';
@@ -1917,7 +1917,7 @@ onAuthStateChanged(auth,async user=>{
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     if(chatUnsub){chatUnsub();chatUnsub=null;}
     if(feedUnsubscribe){feedUnsubscribe();feedUnsubscribe=null;}
-    events=[];courses=[];friendsList=[];activeChatFriend=null;
+    events=[];courses=[];friendsList=[];activeChatFriend=null;_lastLocalDataUpdatedAt=0;
     const chatWindow=document.getElementById('chatWindow');
     if(chatWindow)chatWindow.innerHTML='<div class="chat-empty-state"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:15px;font-weight:600;color:var(--text1);margin-bottom:6px">เลือกเพื่อนเพื่อเริ่มแชท</div></div>';
     const chatFriendList=document.getElementById('chatFriendList');
@@ -1974,27 +1974,62 @@ async function loadUserProfile(){
 }
 
 /* ── Subscribe User Data ── */
-let _isSaving=false;
+// _lastLocalDataUpdatedAt: ค่า updatedAt ที่เราเขียนไปครั้งล่าสุด (ใช้เทียบกับ snapshot ที่ตีกลับมา)
+let _lastLocalDataUpdatedAt=0;
+let _saveTimer=null;
+let _saveInFlight=false;
+let _saveQueued=false;
+
 function subscribeUserData(){
   if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
   unsubSnapshot=onSnapshot(doc(db,'users',currentUser.uid,'data','main'),snap=>{
-    if(_isSaving)return; // ข้ามถ้ากำลัง save อยู่ เพื่อไม่ให้ snapshot เก่า overwrite
-    if(snap.exists()){const d=snap.data();events=d.events||[];courses=d.courses||[];}
-    else{events=[];courses=[];}
+    if(!snap.exists()){events=[];courses=[];renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();renderCourseListView();return;}
+    const d=snap.data();
+    const remoteUpdatedAt=d.updatedAt||0;
+    // ป้องกัน race condition: ถ้า snapshot นี้คือข้อมูล "เก่ากว่า" สิ่งที่เราเพิ่งบันทึกออกไปจากอุปกรณ์นี้เอง
+    // (เช่น snapshot ค้างมาช้า หรือมาจากการ save ของอุปกรณ์อื่นที่ทำงานพร้อมๆกันด้วยข้อมูลเก่า)
+    // ให้ไม่เอามาทับ local state กันข้อมูลที่เพิ่งแก้หายไป
+    if(remoteUpdatedAt<_lastLocalDataUpdatedAt)return;
+    events=d.events||[];courses=d.courses||[];
+    _lastLocalDataUpdatedAt=remoteUpdatedAt;
     renderCalendar();renderEventList();updateStats();renderCourseList();renderTimetable();renderCourseListView();
   });
 }
 
-async function saveUserData(){
+async function _doSaveUserData(){
   if(!currentUser||currentUser.isGuest)return;
-  _isSaving=true;
+  _saveInFlight=true;
+  const ts=Date.now();
   try{
-    await setDoc(doc(db,'users',currentUser.uid,'data','main'),{events,courses,updatedAt:Date.now()});
+    await setDoc(doc(db,'users',currentUser.uid,'data','main'),{events,courses,updatedAt:ts});
+    _lastLocalDataUpdatedAt=ts; // กันไม่ให้ snapshot ของการ save นี้เอง (สะท้อนกลับมา) ถูกมองว่าเก่ากว่า
     if(currentUser.shareEnabled)await pushSharedData();
   }catch(e){console.warn('save:',e);}
-  finally{setTimeout(()=>{_isSaving=false;},1000);} // รอ 1s ให้ snapshot ที่ triggered โดย save นี้ผ่านไปก่อน
+  finally{
+    _saveInFlight=false;
+    if(_saveQueued){_saveQueued=false;_doSaveUserData();} // มีการแก้ไขเพิ่มเข้ามาตอนที่กำลัง save อยู่ → save อีกรอบทันที
+  }
 }
-setInterval(()=>{if(currentUser&&!currentUser.isGuest)saveUserData();},30000);
+
+// Real-time save: ทุกการแก้ไขจะถูกส่งทันที (debounce สั้นๆ 300ms เพื่อรวมการแก้ไขที่ติดกันแน่นๆ
+// เช่น พิมพ์เร็วๆ ไม่ให้ยิง request ถี่เกินไป) แทนที่จะรอ interval 30 วินาทีแบบเดิม
+function saveUserData(){
+  if(!currentUser||currentUser.isGuest)return;
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{
+    _saveTimer=null;
+    if(_saveInFlight){_saveQueued=true;return;} // กำลัง save อยู่ → คิวไว้ ไม่ยิงซ้อน
+    _doSaveUserData();
+  },300);
+}
+
+// บันทึกทันทีก่อนออกจากหน้า/สลับแท็บ เพื่อไม่ให้การแก้ไขล่าสุดตกหายไปเพราะ debounce ยังไม่ทันยิง
+window.addEventListener('beforeunload',()=>{
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;if(currentUser&&!currentUser.isGuest)_doSaveUserData();}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'&&_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;if(currentUser&&!currentUser.isGuest)_doSaveUserData();}
+});
 
 /* ── SHARE ── */
 function openShareModal(){
