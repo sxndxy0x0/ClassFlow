@@ -658,6 +658,39 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
   /* ซ่อนคอลัมน์ห้องบนตารางรายการ มือถือเล็กมาก */
   .course-list-table .clt-hide-xs{display:none}
 }
+
+/* ══ LANDING — MOBILE ══ */
+@media(max-width:900px){
+  .land-hero{grid-template-columns:1fr;gap:32px;padding:40px 20px 24px}
+  .land-visual{height:280px}
+  .land-features{grid-template-columns:1fr 1fr}
+  .land-section{padding:50px 20px}
+  .land-final-card{padding:36px 24px}
+  .land-final-title{font-size:22px}
+}
+@media(max-width:600px){
+  .land-nav{padding:16px 16px 0}
+  .land-hero{padding:28px 16px 20px;gap:24px}
+  .land-h1{font-size:30px;line-height:1.22;margin-bottom:14px}
+  .land-sub{font-size:14px;margin-bottom:22px}
+  .land-cta{padding:12px 20px;font-size:14px}
+  .land-cta-row{gap:10px}
+  .land-cta-note{font-size:11px}
+  .land-stats{gap:20px;margin-top:28px;flex-wrap:wrap}
+  .land-stat b{font-size:17px}
+  .land-visual{height:220px}
+  .morph-badge{font-size:10px;padding:5px 11px;bottom:-10px}
+  .land-features{grid-template-columns:1fr}
+  .land-section{padding:36px 16px}
+  .land-section-title{font-size:20px}
+  .land-feat{padding:18px}
+  .land-final{padding:0 16px 60px}
+  .land-final-card{padding:28px 18px}
+  .land-final-title{font-size:20px}
+  .land-final-sub{font-size:13px}
+  .land-foot{padding:16px 16px 28px}
+  .orb1,.orb2,.orb3{opacity:.08}
+}
 </style>
 </head>
 <body>
@@ -669,14 +702,37 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
 
 <div id="bootLoader"><div class="boot-mark">✦</div></div>
 <script>
+  // ถ้าเคย login มาก่อน → ซ่อน landing ไว้ก่อน รอ Firebase auth
+  // ถ้าไม่เคย login → แสดง landing หลัง 1.5s (ไม่ต้องรอนาน)
+  var _hadLogin=localStorage.getItem('sc_uid');
+  if(!_hadLogin){
+    setTimeout(function(){
+      var bl=document.getElementById('bootLoader');
+      if(bl&&!bl.classList.contains('hidden')){
+        document.getElementById('landing').classList.remove('hidden');
+        bl.classList.add('hidden');
+        setTimeout(function(){if(bl.parentNode)bl.remove();},300);
+      }
+    },1500);
+  }
+  // fallback ถ้า Firebase ไม่ตอบใน 3s (เคย login แต่ network ช้า)
   setTimeout(function(){
     var bl=document.getElementById('bootLoader');
     if(bl&&!bl.classList.contains('hidden')){
       document.getElementById('landing').classList.remove('hidden');
       bl.classList.add('hidden');
-      setTimeout(function(){bl.remove();},300);
+      setTimeout(function(){if(bl.parentNode)bl.remove();},300);
     }
-  },8000);
+  },3000);
+  // hard fallback: 6s
+  setTimeout(function(){
+    var bl=document.getElementById('bootLoader');
+    if(bl&&!bl.classList.contains('hidden')){
+      document.getElementById('landing').classList.remove('hidden');
+      bl.classList.add('hidden');
+      setTimeout(function(){if(bl.parentNode)bl.remove();},300);
+    }
+  },6000);
 </script>
 
 <!-- ── GLOW ORBS ── -->
@@ -2442,6 +2498,11 @@ window.doLogout=doLogout;
 onAuthStateChanged(auth,async user=>{
   const bl=document.getElementById('bootLoader');
   if(user){
+    // ซ่อน landing และ bootLoader ทันทีก่อนทำอะไรทั้งนั้น
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    if(bl){bl.classList.add('hidden');setTimeout(()=>bl.remove(),300);}
     // reset listener เก่าก่อนเสมอ (กรณีสลับบัญชี)
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     if(chatUnsub){chatUnsub();chatUnsub=null;}
@@ -2455,14 +2516,10 @@ onAuthStateChanged(auth,async user=>{
     if(feedList)feedList.innerHTML='';
     const shareCode=genShareCode(user.uid);
     currentUser={uid:user.uid,displayName:user.displayName||user.email,email:user.email,isGuest:false,shareCode,shareEnabled:false,shareCourses:false};
-    localStorage.setItem('sc_uid',user.uid); // mark เคย login แล้ว
-    document.getElementById('landing').classList.add('hidden');
-    document.getElementById('authOverlay').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
+    localStorage.setItem('sc_uid',user.uid);
     updateUserBar();
     await loadUserProfile();
     updateUserBar();
-    // บันทึก shareCode mapping เพื่อให้คนอื่นส่งคำขอได้
     try{await setDoc(doc(db,'userCodes',currentUser.shareCode),{uid:currentUser.uid,displayName:currentUser.displayName},{merge:true});}catch(e){console.warn('userCodes:',e);}
     subscribeUserData();
     loadSettings();
@@ -2473,8 +2530,8 @@ onAuthStateChanged(auth,async user=>{
   }else{
     document.getElementById('app').classList.add('hidden');
     document.getElementById('landing').classList.remove('hidden');
+    if(bl){bl.classList.add('hidden');setTimeout(()=>bl.remove(),300);}
   }
-  if(bl){bl.classList.add('hidden');setTimeout(()=>bl.remove(),300);}
 });
 
 function updateUserBar(){
