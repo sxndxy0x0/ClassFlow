@@ -953,8 +953,10 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
       </div>
 
       <!-- Notifications -->
-      <div class="settings-card">
+      <div class="settings-card" id="notifSettingsCard">
         <div class="settings-card-title"><i class="ic" data-icon="bell"></i> การแจ้งเตือน</div>
+        <div id="notifUnsupported" style="display:none;padding:12px;color:var(--text-muted);font-size:13px">⚠️ เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน</div>
+        <div id="notifToggles">
         <div class="settings-row">
           <div><div class="settings-row-label">แจ้งเตือนกิจกรรม</div><div class="settings-row-desc">รับการแจ้งเตือนก่อนกิจกรรมเริ่ม</div></div>
           <label class="toggle-switch"><input type="checkbox" id="notifEvents" onchange="saveSetting('notifEvents',this.checked)"><span class="toggle-track"></span></label>
@@ -970,6 +972,7 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
         <div class="settings-row">
           <div><div class="settings-row-label">เสียงแจ้งเตือน</div><div class="settings-row-desc">เล่นเสียงเมื่อมีการแจ้งเตือน</div></div>
           <label class="toggle-switch"><input type="checkbox" id="notifSound" onchange="saveSetting('notifSound',this.checked)"><span class="toggle-track"></span></label>
+        </div>
         </div>
       </div>
 
@@ -2785,12 +2788,27 @@ function applySettingsToUI(){
 }
 
 function loadLocalSettings(){
+  const notifSupported=typeof Notification!=='undefined';
+  const LOCAL_NOTIF=['notifEvents','notifMessages','notifPosts','notifSound'];
   try{
     const local=JSON.parse(localStorage.getItem('sc_settings')||'{}');
+    // ถ้า browser ไม่รองรับ (Safari iOS) → force false ทั้งหมดและล้าง localStorage
+    if(!notifSupported){
+      LOCAL_NOTIF.forEach(k=>{local[k]=false;appSettings[k]=false;});
+      localStorage.setItem('sc_settings',JSON.stringify(local));
+    }
     Object.assign(appSettings,local);
+    if(!notifSupported)LOCAL_NOTIF.forEach(k=>appSettings[k]=false);
   }catch(e){}
+  // แสดง/ซ่อน UI การแจ้งเตือน
+  const notifToggles=document.getElementById('notifToggles');
+  const notifUnsupported=document.getElementById('notifUnsupported');
+  if(!notifSupported){
+    if(notifToggles)notifToggles.style.display='none';
+    if(notifUnsupported)notifUnsupported.style.display='block';
+  }
   applySettingsToUI();
-  if(appSettings.notifEvents&&typeof Notification!=='undefined'&&Notification.permission==='granted')startEventNotifChecker();
+  if(notifSupported&&appSettings.notifEvents&&Notification.permission==='granted')startEventNotifChecker();
   renderCalendar();
 }
 
