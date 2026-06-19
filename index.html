@@ -1905,7 +1905,7 @@ document.getElementById('textInput').addEventListener('keydown',e=>{if((e.ctrlKe
 ══════════════════════ */
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import{getFirestore,doc,setDoc,getDoc,getDocs,deleteDoc,addDoc,updateDoc,collection,onSnapshot,query,orderBy,limit,where,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,getDoc,getDocs,deleteDoc,addDoc,updateDoc,collection,onSnapshot,query,orderBy,limit,where,serverTimestamp,deleteField}from"https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyDEoJ1IC4o3EGTt8PWddYEhoHuSHP5-Ldw",
@@ -2796,22 +2796,29 @@ function loadLocalSettings(){
 
 async function loadSettings(){
   if(!currentUser)return;
-  // keys ที่ผูกกับ browser นั้นๆ เท่านั้น ไม่ sync จาก Firestore
   const LOCAL_ONLY_KEYS=['notifEvents','notifMessages','notifPosts','notifSound'];
   try{
     const snap=await getDoc(doc(db,'users',currentUser.uid,'profile','appSettings'));
     if(snap.exists()){
       const d=snap.data();
-      // merge เฉพาะ key ที่ไม่ใช่ notif (notif ใช้ localStorage ของ browser นี้เท่านั้น)
+      // ถ้า Firestore มี notif keys ค้างอยู่ → ลบออกทันที
+      const staleKeys=LOCAL_ONLY_KEYS.filter(k=>k in d);
+      if(staleKeys.length>0){
+        const cleanup={};staleKeys.forEach(k=>{cleanup[k]=deleteField();});
+        setDoc(doc(db,'users',currentUser.uid,'profile','appSettings'),cleanup,{merge:true}).catch(()=>{});
+      }
       LOCAL_ONLY_KEYS.forEach(k=>delete d[k]);
       Object.assign(appSettings,d);
-      // sync กลับ localStorage เฉพาะ non-notif keys
       const local=JSON.parse(localStorage.getItem('sc_settings')||'{}');
       Object.assign(local,d);
       localStorage.setItem('sc_settings',JSON.stringify(local));
     }
+    // โหลดค่า notif จาก localStorage ของ browser นี้เท่านั้น
+    try{
+      const local=JSON.parse(localStorage.getItem('sc_settings')||'{}');
+      LOCAL_ONLY_KEYS.forEach(k=>{if(k in local)appSettings[k]=local[k];});
+    }catch(e){}
     applySettingsToUI();
-    // apply หลังโหลด — เปิด notifChecker เฉพาะถ้า browser นี้ให้สิทธิ์แล้ว และ localStorage เปิดไว้
     if(appSettings.notifEvents&&typeof Notification!=='undefined'&&Notification.permission==='granted')startEventNotifChecker();
     updateOnlineStatus(appSettings.privOnline);
     if(onlineInterval)clearInterval(onlineInterval);
