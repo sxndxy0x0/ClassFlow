@@ -702,18 +702,22 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
 
 <div id="bootLoader"><div class="boot-mark">✦</div><div id="bootMsg" style="margin-top:14px;font-size:12px;color:var(--text3);font-family:'Sarabun',sans-serif;text-align:center"></div></div>
 <script>
-  // ถ้าเพิ่งกลับมาจาก redirect login → แสดงข้อความ
+  // ตรวจสอบว่าเพิ่งกลับมาจาก redirect login หรือเคย login มาก่อน
+  var _isRedirecting=false;
   try{
     if(sessionStorage.getItem('_cf_redirecting')){
       sessionStorage.removeItem('_cf_redirecting');
+      _isRedirecting=true;
       var bm=document.getElementById('bootMsg');
       if(bm)bm.textContent='กำลังเข้าสู่ระบบ...';
     }
   }catch(e){}
-  // ถ้าเคย login มาก่อน → ซ่อน landing ไว้ก่อน รอ Firebase auth
-  // ถ้าไม่เคย login → แสดง landing หลัง 1.5s (ไม่ต้องรอนาน)
+
   var _hadLogin=localStorage.getItem('sc_uid');
-  if(!_hadLogin){
+
+  // ถ้ากำลัง redirect หรือเคย login → รอ Firebase ก่อน ไม่แสดง landing เร็ว
+  // ถ้าไม่เคย login เลย → แสดง landing หลัง 1.5s
+  if(!_hadLogin && !_isRedirecting){
     setTimeout(function(){
       var bl=document.getElementById('bootLoader');
       if(bl&&!bl.classList.contains('hidden')){
@@ -723,7 +727,8 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
       }
     },1500);
   }
-  // fallback ถ้า Firebase ไม่ตอบใน 3s (เคย login แต่ network ช้า)
+  // fallback: redirect อาจใช้เวลา 8s กว่า Firebase จะ resolve
+  var _fallbackMs = _isRedirecting ? 10000 : 5000;
   setTimeout(function(){
     var bl=document.getElementById('bootLoader');
     if(bl&&!bl.classList.contains('hidden')){
@@ -731,16 +736,7 @@ body,html{font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);c
       bl.classList.add('hidden');
       setTimeout(function(){if(bl.parentNode)bl.remove();},300);
     }
-  },3000);
-  // hard fallback: 6s
-  setTimeout(function(){
-    var bl=document.getElementById('bootLoader');
-    if(bl&&!bl.classList.contains('hidden')){
-      document.getElementById('landing').classList.remove('hidden');
-      bl.classList.add('hidden');
-      setTimeout(function(){if(bl.parentNode)bl.remove();},300);
-    }
-  },6000);
+  },_fallbackMs);
 </script>
 
 <!-- ── GLOW ORBS ── -->
@@ -2496,12 +2492,19 @@ window.doGoogleLogin=doGoogleLogin;
 /* ── จัดการ redirect result หลัง page reload ── */
 getRedirectResult(auth).then(result=>{
   // onAuthStateChanged จะ handle user เอง ไม่ต้องทำอะไรเพิ่ม
-  // แต่ถ้า error ให้แจ้งผู้ใช้
+  // result อาจเป็น null ถ้าไม่ได้มาจาก redirect — ปล่อยผ่าน
 }).catch(e=>{
-  if(e?.code&&e.code!=='auth/null-user'){
-    console.warn('getRedirectResult error:',e.code);
+  // redirect ล้มเหลว → ซ่อน bootLoader แสดง landing พร้อม error
+  console.warn('getRedirectResult error:',e?.code,e?.message);
+  const bl=document.getElementById('bootLoader');
+  if(bl&&!bl.classList.contains('hidden')){
+    document.getElementById('landing').classList.remove('hidden');
+    bl.classList.add('hidden');
+    setTimeout(()=>{if(bl.parentNode)bl.remove();},300);
+  }
+  if(e?.code&&e.code!=='auth/null-user'&&e.code!=='auth/no-auth-event'){
     const el=document.getElementById('authMsg');
-    if(el){el.className='auth-msg err';el.textContent='เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่';}
+    if(el){el.className='auth-msg err';el.textContent='เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่ ('+e.code+')';}
   }
 });
 
@@ -2533,6 +2536,9 @@ async function doLogout(){
 window.doLogout=doLogout;
 
 /* ── Auth State ── */
+let _redirectResultDone=false;
+const _redirectResultPromise=getRedirectResult(auth).then(r=>{_redirectResultDone=true;return r;}).catch(e=>{_redirectResultDone=true;});
+
 onAuthStateChanged(auth,async user=>{
   const bl=document.getElementById('bootLoader');
   if(user){
@@ -2566,9 +2572,16 @@ onAuthStateChanged(auth,async user=>{
     renderChatFriends();
     switchTab('monthly');
   }else{
+    // รอให้ getRedirectResult resolve ก่อน — ป้องกัน landing โชว์ก่อน redirect กลับมา
+    if(!_redirectResultDone){
+      await _redirectResultPromise;
+      // ถ้าหลังรอแล้ว currentUser ถูก set แล้ว (onAuthStateChanged ยิงอีกรอบ) ให้หยุด
+      if(currentUser)return;
+    }
     document.getElementById('app').classList.add('hidden');
     document.getElementById('landing').classList.remove('hidden');
     if(bl){bl.classList.add('hidden');setTimeout(()=>bl.remove(),300);}
+    localStorage.removeItem('sc_uid');
   }
 });
 
